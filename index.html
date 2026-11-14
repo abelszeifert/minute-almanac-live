@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minute Almanac Live</title>
+<meta name="description" content="Open it at any time of day and get 20+ strange facts about the number on your clock. 16:27 becomes 1,627. New facts every minute.">
+<meta property="og:title" content="Minute Almanac Live">
+<meta property="og:description" content="20+ strange facts about the number on your clock, refreshed every minute.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a saffron clock slab with serif numerals on the left, a ruled, numbered ledger of facts scrolling on the right. */
+:root{
+  --bg:#EFECF4; --ink:#24122E; --muted:#6B5878; --rule:#D3CADD;
+  --panel:#F5B700; --on-panel:#24122E; --accent:#D81E5B; --track:rgba(36,18,46,.22);
+  --c-year:#B3261E; --c-math:#5B2A86; --c-sci:#0B6E5F; --c-time:#1F5FBF; --c-fun:#C2185B; --c-rec:#8A6400;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#170D1E; --ink:#F1EAF6; --muted:#A894B5; --rule:#38254A;
+    --panel:#F5B700; --on-panel:#24122E; --accent:#FF5C8A; --track:rgba(36,18,46,.22);
+    --c-year:#FF8A7A; --c-math:#C9A2FF; --c-sci:#4FD1B8; --c-time:#8DB8FF; --c-fun:#FF86B8; --c-rec:#F5C542;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#170D1E; --ink:#F1EAF6; --muted:#A894B5; --rule:#38254A;
+    --panel:#F5B700; --on-panel:#24122E; --accent:#FF5C8A; --track:rgba(36,18,46,.22);
+    --c-year:#FF8A7A; --c-math:#C9A2FF; --c-sci:#4FD1B8; --c-time:#8DB8FF; --c-fun:#FF86B8; --c-rec:#F5C542;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45}
+main{display:grid;grid-template-columns:minmax(320px,40%) 1fr;height:100%}
+.panel{background:var(--panel);color:var(--on-panel);padding:clamp(20px,4vw,48px);display:flex;flex-direction:column;gap:14px;justify-content:center;align-items:center;text-align:center;overflow:auto;container-type:inline-size}
+.bar{align-self:stretch}
+.controls{justify-content:center}
+.eyebrow{margin:0;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:13px;opacity:.8}
+.clock{font-family:var(--display);font-weight:900;font-size:clamp(56px,26cqi,230px);white-space:nowrap;max-width:100%;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:6px 0 4px}
+.colon{color:var(--accent);position:relative;top:-.06em;animation:blink 2s steps(1) infinite}
+@keyframes blink{50%{opacity:.25}}
+.reads{margin:0;font-size:20px;max-width:22ch;text-wrap:balance}
+.reads strong{font-family:var(--display);font-weight:900;font-size:1.7em;color:var(--accent);letter-spacing:.01em;vertical-align:-.06em}
+.bar{height:6px;background:var(--track);margin-top:18px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s linear}
+.next{margin:0;font-size:14px;font-variant-numeric:tabular-nums;opacity:.85}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+button,.controls input{font:inherit;font-size:15px;font-weight:700;border-radius:0;padding:9px 14px;cursor:pointer}
+button{background:var(--on-panel);color:var(--panel);border:2px solid var(--on-panel)}
+button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+button{border-radius:999px;padding:10px 20px}
+button.ghost{background:transparent;color:var(--on-panel)}
+.peek{display:flex;gap:8px;align-items:center;font-size:14px}
+.controls input{background:transparent;color:var(--on-panel);border:2px solid rgba(255,255,255,.5);color-scheme:dark;font-weight:500}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ledger{overflow:auto;padding:clamp(20px,4vw,48px) clamp(16px,4vw,56px) 64px}
+.ledger h1{font-family:var(--display);font-weight:900;font-size:clamp(34px,4.4vw,56px);line-height:1;margin:0 0 6px;text-wrap:balance}
+.sub{margin:0 0 22px;color:var(--muted);font-size:15px}
+ol{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink);max-width:760px}
+.fact{display:grid;grid-template-columns:52px 1fr;gap:6px 12px;padding:16px 0 17px;border-bottom:1px solid var(--rule);animation:rise .45s both;animation-delay:calc(var(--i)*28ms)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.idx{font-family:var(--display);font-weight:900;font-size:27px;line-height:1;color:var(--tc);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tc);margin-bottom:3px}
+.fact p{margin:0;font-size:18.5px;font-weight:500;max-width:62ch;overflow-wrap:anywhere}
+.fact[data-t="year"]{--tc:var(--c-year)} .fact[data-t="math"]{--tc:var(--c-math)}
+.fact[data-t="sci"]{--tc:var(--c-sci)} .fact[data-t="time"]{--tc:var(--c-time)} .fact[data-t="fun"]{--tc:var(--c-fun)} .fact[data-t="rec"]{--tc:var(--c-rec)}
+.sw{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.2em;border:1px solid var(--ink);margin:0 .15em}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
+.foot{color:var(--muted);font-size:13.5px;max-width:62ch;margin-top:22px}
+@media (max-width:820px){
+  html,body{height:auto}
+  main{display:block;height:auto}
+  .panel{overflow:visible;padding:24px 20px 22px}
+  .ledger{overflow:visible}
+  .fact{grid-template-columns:40px 1fr}
+  .idx{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){.fact,.colon{animation:none}.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <aside class="panel">
+    <p class="eyebrow" id="eyebrow">Your clock says</p>
+    <div class="clock" id="clock" aria-live="off">--<span class="colon">:</span>--</div>
+    <p class="reads">so here is the number <strong id="num">0</strong></p>
+    <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+    <p class="next" id="next"></p>
+    <div class="controls">
+      <button type="button" id="shuffle">Shuffle these facts</button>
+    </div>
+  </aside>
+  <section class="ledger">
+    <h1 id="head">Facts</h1>
+    <p class="sub" id="sub"></p>
+    <ol id="list"></ol>
+    <p class="foot">History, record and trivia entries are hand-picked; records are as known in 2025 and some may have been broken since. Maths, calendar and science entries are calculated live from the number, so every minute of the day gets its own set. Year facts before 1583 use today's calendar rules.</p>
+  </section>
+</main>
+<script>
+"use strict";
+/* ---------- hand-picked: years ---------- */
+const Y={
+9:["In AD 9, three entire Roman legions were wiped out in the Teutoburg Forest. Emperor Augustus reportedly kept shouting at the dead general to give them back."],
+14:["Augustus, Rome’s first emperor, died in AD 14. You say his name every August."],
+37:["Caligula became emperor in AD 37. Nero was born the same year. Rough vintage."],
+41:["In AD 41, Caligula was assassinated by his own bodyguards."],
+43:["Rome invaded Britain in AD 43, and Emperor Claudius reportedly brought war elephants along."],
+54:["Nero became emperor of Rome in AD 54. He was 16."],
+105:["105 is the traditional date for the invention of paper, credited to Chinese court official Cai Lun."],
+113:["Trajan’s Column went up in Rome in 113. Unrolled, its spiral carving would stretch about 190 metres."],
+117:["The Roman Empire hit its biggest size ever in 117. It shrank from then on."],
+122:["Hadrian’s Wall was started in 122. It ran 117 km, coast to coast across Britain."],
+132:["In 132, Zhang Heng built an earthquake detector: a bronze jar whose dragons dropped balls into the mouths of bronze toads."],
+138:["Emperor Hadrian died in 138. He had spent more than half his reign travelling outside Italy."],
+212:["In 212, Emperor Caracalla made nearly every free person in the Roman Empire a citizen overnight. Mostly so he could tax them."],
+220:["China’s Han dynasty collapsed in 220 after four centuries, starting the Three Kingdoms era."],
+238:["238 is the Year of the Six Emperors. Rome burned through six of them in twelve months."],
+301:["San Marino dates its founding to 301, which would make it the oldest surviving republic on Earth."],
+312:["In 312, Constantine won the Battle of the Milvian Bridge after reportedly seeing a cross of light in the sky."],
+313:["The Edict of Milan made Christianity legal in the Roman Empire in 313."],
+325:["The Council of Nicaea met in 325. Among other things, it settled how the date of Easter is worked out."],
+330:["In 330, Constantinople was inaugurated as the new capital of the Roman Empire. It stayed a capital for almost 1,600 years."],
+337:["Constantine the Great died in 337. He was baptised only on his deathbed."],
+406:["On the last night of 406, Vandals, Alans and Suebi crossed the Rhine, reportedly frozen solid, into the Roman Empire."],
+410:["Rome was sacked in 410, the first time an enemy had taken the city in about 800 years."],
+451:["Attila the Hun was finally stopped in 451 at the Battle of the Catalaunian Plains."],
+453:["Attila the Hun died in 453. The story goes that he had a nosebleed on his wedding night."],
+455:["The Vandals sacked Rome in 455. Yes, that is where the word vandalism comes from."],
+525:["In 525 a monk called Dionysius Exiguus invented the AD year count. The number on your clock is using his system."],
+529:["In 529, Emperor Justinian published his law code. Most of continental Europe’s legal systems descend from it."],
+532:["The Nika riots of 532 started as chariot-racing fan violence and burned down half of Constantinople."],
+536:["536 has been called the worst year to be alive. A volcanic haze dimmed the Sun for 18 months and summer temperatures crashed."],
+537:["Hagia Sophia was finished in 537 after less than six years of building. It stayed the world’s largest cathedral for almost a thousand years."],
+541:["The first recorded plague pandemic, the Plague of Justinian, broke out in 541."],
+552:["Around 552, two monks smuggled silkworm eggs out of China inside hollow canes and ended a thousand-year trade secret."],
+618:["China’s Tang dynasty began in 618. It is often called the golden age of Chinese poetry."],
+622:["Year 1 of the Islamic calendar begins in 622."],
+628:["In 628, the Indian mathematician Brahmagupta wrote down the first rules for doing arithmetic with zero."],
+636:["The Battle of Yarmouk in 636 ended Roman rule in Syria after seven centuries."],
+705:["A hot-spring inn in Japan, Nishiyama Onsen Keiunkan, opened in 705. It is still taking guests: the oldest hotel in the world."],
+711:["An army crossed from North Africa into Spain in 711. Gibraltar is named after its commander: Jabal Tariq, Tariq’s mountain."],
+718:["Hoshi Ryokan, a Japanese inn, opened in 718 and was run by the same family for 46 generations."],
+732:["The Battle of Tours in 732 stopped the Umayyad advance into France."],
+750:["The Abbasid dynasty took over the Islamic world in 750 and soon founded Baghdad."],
+751:["After the Battle of Talas in 751, captured Chinese papermakers are said to have carried their craft west. Paper reached Europe that way."],
+752:["Japan’s Great Buddha of Nara was consecrated in 752. Casting it used up most of the country’s bronze."],
+800:["Charlemagne was crowned emperor on Christmas Day, 800. His biographer claims he had no idea it was coming."],
+803:["A restaurant in Salzburg, St. Peter Stiftskulinarium, is mentioned in a document from 803. It is still serving dinner."],
+814:["Charlemagne died in 814. Most Europeans alive today are almost certainly his descendants."],
+841:["Vikings founded Dublin in 841 as a winter camp for their ships."],
+843:["The Treaty of Verdun split Charlemagne’s empire in three in 843, sketching the first outlines of France and Germany."],
+859:["The University of al-Qarawiyyin in Fez was founded in 859 by a woman, Fatima al-Fihri. Guinness lists it as the oldest still operating."],
+907:["China’s Tang dynasty fell in 907 after almost 300 years."],
+910:["Cluny Abbey was founded in 910. Its church was the largest building in Europe for centuries."],
+911:["In 911 a Viking called Rollo was handed a slice of France. It became Normandy: land of the Northmen."],
+927:["In 927, Æthelstan became the first king of all England."],
+930:["Iceland’s parliament, the Althing, first met in 930 on an open field. It is one of the oldest parliaments in the world."],
+955:["At Lechfeld in 955, Otto I defeated the Magyars and ended their raids on western Europe. They settled down and founded Hungary."],
+1000:["Stephen I was crowned the first King of Hungary at the turn of the year 1000.","Around the year 1000, Leif Erikson reached North America, nearly 500 years ahead of Columbus."],
+1010:["In 1010 the Persian poet Ferdowsi finished the Shahnameh after about 30 years. It is roughly 50,000 couplets long."],
+1016:["Cnut the Great, a Dane, became King of England in 1016."],
+1021:["Tree rings prove Vikings were chopping wood in Newfoundland in exactly 1021. A solar storm left a datable mark in the wood."],
+1040:["The real Macbeth killed King Duncan in 1040 and then ruled Scotland for 17 fairly peaceful years.","The Weihenstephan brewery in Bavaria claims a founding date of 1040, which would make it the oldest brewery still running."],
+1054:["A star exploded in 1054 and was visible in broad daylight for 23 days. Its wreckage is the Crab Nebula.","The Christian church split into Catholic and Orthodox halves in 1054. They still haven’t fully made up."],
+1057:["The real Macbeth was killed in battle in 1057, by Malcolm, not Macduff."],
+1100:["King William II of England was killed by a stray arrow while hunting in 1100. His brother had himself crowned three days later."],
+1119:["The Knights Templar were founded around 1119 by nine knights."],
+1120:["The White Ship sank in 1120 with the heir to the English throne on board. The crew had reportedly been drinking."],
+1135:["Henry I of England died in 1135, supposedly from eating too many lampreys against his doctor’s orders."],
+1139:["Afonso Henriques was proclaimed the first King of Portugal in 1139."],
+1147:["The first written mention of Moscow dates from 1147."],
+1154:["In 1154, Nicholas Breakspear became Pope Adrian IV. He is still the only English pope."],
+1158:["Munich was founded in 1158, next to a bridge built to tax the salt trade."],
+1202:["In 1202, Fibonacci’s book Liber Abaci introduced Europe to the digits 0–9. Before that, sums were done in Roman numerals."],
+1204:["Crusaders on their way to Jerusalem sacked Christian Constantinople instead in 1204."],
+1206:["In 1206 a warlord called Temüjin took a new title: Genghis Khan."],
+1209:["Cambridge University was started in 1209 by scholars running away from a riot in Oxford."],
+1212:["1212 is the year of the Children’s Crusade, when thousands of young people set off to walk to Jerusalem."],
+1215:["Magna Carta was sealed in 1215. A few of its clauses are still law in England."],
+1222:["Hungary’s Golden Bull of 1222 limited the king’s power, just seven years after Magna Carta.","The University of Padua was founded in 1222. Galileo later taught there."],
+1227:["Genghis Khan died in 1227. Nobody has ever found his grave."],
+1237:["Berlin counts 1237 as its birth year: the first document mentioning its twin town Cölln."],
+1241:["The Mongols crushed Hungary’s army at Mohi in 1241, then abruptly turned home when their Great Khan died."],
+1252:["Florence minted the first gold florin in 1252. It became the dollar of the Middle Ages."],
+1257:["In 1257 the Samalas volcano in Indonesia erupted so violently that it left traces in ice at both poles. It took until 2013 to identify the culprit."],
+1258:["The Mongols sacked Baghdad in 1258. It was said the Tigris ran black with ink from the libraries."],
+1305:["William Wallace was executed in London in 1305."],
+1307:["On Friday 13 October 1307, the Knights Templar were arrested all across France on the same morning."],
+1309:["The papacy moved from Rome to Avignon in 1309 and stayed there for 67 years."],
+1314:["Robert the Bruce won the Battle of Bannockburn in 1314."],
+1315:["The Great Famine began in 1315 after it rained almost non-stop across Europe for the whole summer."],
+1321:["Dante died in 1321, having only just finished the Divine Comedy."],
+1324:["Mansa Musa of Mali went on pilgrimage in 1324 and handed out so much gold in Cairo that its price stayed low for years."],
+1325:["By tradition the Aztecs founded Tenochtitlan in 1325, where they saw an eagle on a cactus. That scene is on Mexico’s flag."],
+1335:["The kings of Hungary, Bohemia and Poland met at Visegrád in 1335. The modern Visegrád Group is named after that summit."],
+1337:["The Hundred Years’ War began in 1337. It lasted 116 years."],
+1342:["Louis the Great became King of Hungary in 1342 and later ruled Poland as well."],
+1346:["At Crécy in 1346, English longbows beat a much larger French army of knights."],
+1347:["The Black Death reached Europe in 1347 aboard trading ships from the Black Sea."],
+1348:["Charles University in Prague was founded in 1348. It is the oldest university in Central Europe."],
+1356:["The Golden Bull of 1356 fixed how Holy Roman Emperors were elected: seven electors, for the next 450 years."],
+1405:["Chinese admiral Zheng He set out in 1405 with a fleet of over 300 ships, some several times the size of Columbus’s."],
+1410:["Prague’s astronomical clock was installed in 1410. It is the oldest one still working."],
+1415:["At Agincourt in 1415, a tired and outnumbered English army beat the French, mostly thanks to mud and longbows."],
+1420:["Brunelleschi started building the dome of Florence Cathedral in 1420, without scaffolding from the ground."],
+1429:["A teenage Joan of Arc broke the siege of Orléans in 1429 in nine days."],
+1431:["Joan of Arc was burned at the stake in 1431. She was about 19."],
+1436:["The dome of Florence Cathedral was completed in 1436. It is still the largest brick dome ever built."],
+1440:["Around 1440, Johannes Gutenberg worked out printing with movable metal type.","Eton College was founded in 1440 by an 18-year-old king, Henry VI."],
+1443:["King Sejong created the Korean alphabet, Hangul, in 1443. It was designed so a clever person could learn it in a morning."],
+1450:["Machu Picchu was built around 1450, then abandoned about a century later."],
+1452:["Leonardo da Vinci was born in 1452."],
+1453:["Constantinople fell to the Ottomans in 1453, ending the Roman Empire about 1,480 years after Augustus.","The Hundred Years’ War ended in 1453."],
+1455:["The Gutenberg Bible was printed in 1455. About 180 copies were made; 49 survive."],
+1456:["In 1456 the Pope ordered church bells rung at noon for the defenders of Belgrade, led by John Hunyadi. Many churches still ring at noon."],
+1458:["Matthias Corvinus was elected King of Hungary in 1458. He was 14."],
+1500:["A Portuguese fleet aiming for India swung too far west in 1500 and bumped into Brazil."],
+1503:["Leonardo started painting the Mona Lisa around 1503 and kept fiddling with it for years."],
+1504:["Stranded on Jamaica in 1504, Columbus used a predicted lunar eclipse to scare the locals into feeding his crew.","Michelangelo’s David was unveiled in 1504. It is 5.17 metres tall."],
+1506:["The foundation stone of St Peter’s Basilica was laid in 1506. The building took 120 years."],
+1507:["A map printed in 1507 was the first to use the name America."],
+1508:["Michelangelo started the Sistine Chapel ceiling in 1508. He insisted he was a sculptor, not a painter."],
+1512:["The Sistine Chapel ceiling was finished in 1512 after four years of painting overhead."],
+1513:["Machiavelli wrote The Prince in 1513, hoping it would get him his job back. It didn’t."],
+1514:["György Dózsa led a huge peasant revolt in Hungary in 1514."],
+1516:["Bavaria’s beer purity law dates from 1516: water, barley and hops only. Nobody knew yeast existed yet."],
+1517:["Martin Luther published his 95 Theses in 1517 and split Western Christianity."],
+1518:["In the summer of 1518, hundreds of people in Strasbourg danced uncontrollably for weeks. Nobody knows why."],
+1519:["Magellan’s fleet set sail in 1519: five ships and about 270 men.","Leonardo da Vinci died in 1519. He left fewer than 20 finished paintings."],
+1521:["The Aztec capital Tenochtitlan fell to Cortés in 1521."],
+1522:["The first trip around the world ended in 1522. One ship and 18 men made it home. Magellan was not among them."],
+1526:["Hungary lost the Battle of Mohács in 1526 in about two hours. The young king drowned in a stream while fleeing."],
+1527:["Mutinous imperial troops sacked Rome in 1527. The Pope escaped down a secret corridor."],
+1529:["The Ottomans besieged Vienna for the first time in 1529 and were beaten partly by the weather."],
+1532:["In 1532, Francisco Pizarro captured the Inca emperor with just 168 men."],
+1533:["Ivan the Terrible became ruler of Moscow in 1533. He was three years old.","The future Elizabeth I was born in 1533."],
+1536:["Anne Boleyn was beheaded in 1536. Henry VIII got engaged again the next day."],
+1541:["The Ottomans took Buda in 1541 without a fight and held it for 145 years."],
+1543:["Copernicus published his Sun-centred universe in 1543. Legend says he saw the first copy on his deathbed.","In 1543 the first Europeans reached Japan: Portuguese traders blown off course."],
+1545:["Henry VIII’s warship Mary Rose sank in 1545 while he watched from the shore. It was raised in 1982."],
+1547:["In 1547, Ivan the Terrible became the first ruler to be crowned Tsar of Russia."],
+1552:["In 1552 about 2,000 defenders held the castle of Eger against an Ottoman army many times larger."],
+1553:["Lady Jane Grey was Queen of England for nine days in 1553."],
+1554:["São Paulo was founded in 1554 as a small Jesuit mission."],
+1555:["Nostradamus published his prophecies in 1555. People have been reading whatever they like into them ever since."],
+1556:["The deadliest earthquake on record struck Shaanxi, China, in 1556. About 830,000 people died."],
+1557:["The equals sign was invented in 1557 by Welshman Robert Recorde, who was tired of writing “is equal to”."],
+1558:["Elizabeth I became queen in 1558 and reigned for 44 years."],
+1600:["The East India Company was founded in 1600. At its peak it had an army twice the size of Britain’s.","In 1600, William Gilbert worked out that the whole Earth is a giant magnet."],
+1602:["The Dutch East India Company was founded in 1602 and became the first company ever to sell shares to the public."],
+1603:["Elizabeth I died in 1603. The same year the Tokugawa shoguns began 265 years of rule in Japan."],
+1604:["A supernova lit up the sky in 1604. Nobody has seen one in our galaxy with the naked eye since."],
+1605:["Guy Fawkes was caught in 1605 under Parliament with 36 barrels of gunpowder.","The first part of Don Quixote came out in 1605."],
+1606:["In 1606 the Dutch ship Duyfken made the first recorded European landing in Australia."],
+1607:["Jamestown, the first lasting English settlement in America, was founded in 1607."],
+1608:["The telescope was invented in 1608. A Dutch spectacle maker applied for the patent and was turned down."],
+1609:["In 1609, Kepler showed that planets move in ellipses, not circles."],
+1610:["In January 1610, Galileo saw four moons circling Jupiter: the first proof that not everything orbits Earth."],
+1611:["The King James Bible was published in 1611."],
+1613:["Shakespeare’s Globe Theatre burned down in 1613 after a stage cannon set the roof on fire. One man’s burning trousers were put out with ale."],
+1614:["John Napier published logarithms in 1614, turning multiplication into addition for the next 350 years."],
+1616:["Shakespeare and Cervantes both died on 23 April 1616, yet ten days apart. England and Spain used different calendars."],
+1618:["The Thirty Years’ War began in 1618 when two officials were thrown out of a window in Prague. They survived the 21-metre fall."],
+1620:["The Mayflower crossed the Atlantic in 1620. It took 66 days.","Around 1620, Cornelis Drebbel rowed the first working submarine under the Thames."],
+1621:["The harvest feast later called the first Thanksgiving happened in 1621. It lasted three days."],
+1623:["Shakespeare’s First Folio was printed in 1623. Without it, 18 plays including Macbeth would be lost."],
+1626:["Francis Bacon died in 1626 of a chill he reportedly caught while stuffing a chicken with snow to test refrigeration.","In 1626, Peter Minuit acquired Manhattan for goods worth 60 guilders."],
+1627:["The last aurochs, the wild ancestor of every cow, died in a Polish forest in 1627."],
+1628:["The Swedish warship Vasa set off on its maiden voyage in 1628, sailed about 1,300 metres and sank.","In 1628, William Harvey showed that blood circulates around the body."],
+1631:["A Bible printed in 1631 left out one word: “Thou shalt commit adultery.” The printers were fined heavily."],
+1632:["Work on the Taj Mahal began in 1632. It took about 20,000 workers some two decades."],
+1633:["Galileo was put on trial in 1633 for saying the Earth moves. The Church formally admitted he was right in 1992."],
+1635:["The Académie française was founded in 1635 to guard the French language. It is still at it."],
+1636:["Harvard was founded in 1636. That makes it older than calculus."],
+1637:["Tulip mania collapsed in February 1637. At the peak, single bulbs had sold for more than a house.","Around 1637, Fermat scribbled that he had a marvellous proof too big for the margin. The world needed 358 years to find one."],
+1642:["Blaise Pascal started building a mechanical calculator in 1642 to help his father do taxes. He was 19.","Abel Tasman reached Tasmania and New Zealand in 1642 and somehow missed Australia in between."],
+1643:["Louis XIV became King of France in 1643 at the age of four. He reigned for 72 years, a record that still stands.","Torricelli invented the barometer in 1643."],
+1644:["China’s Ming dynasty fell in 1644 after 276 years."],
+1648:["The Peace of Westphalia ended the Thirty Years’ War in 1648."],
+1649:["England executed its king, Charles I, in 1649. He wore two shirts so nobody would see him shiver."],
+1650:["René Descartes died in 1650 in Stockholm, where the queen had him giving philosophy lessons at five in the morning."],
+1652:["Cape Town was founded in 1652 as a vegetable garden for passing Dutch ships."],
+1654:["Probability theory was born in 1654 in letters between Pascal and Fermat about a gambling puzzle."],
+1655:["Christiaan Huygens discovered Titan, Saturn’s largest moon, in 1655."],
+1656:["Huygens invented the pendulum clock in 1656. Clocks went from losing 15 minutes a day to about 15 seconds."],
+1658:["Oliver Cromwell died in 1658. Three years later he was dug up and beheaded anyway."],
+1700:["A giant earthquake hit the Pacific Northwest on 26 January 1700. We know the date because Japan recorded the tsunami."],
+1701:["Yale was founded in 1701."],
+1703:["Peter the Great founded St Petersburg on a swamp in 1703.","Rákóczi’s War of Independence against the Habsburgs began in Hungary in 1703."],
+1704:["Newton published Opticks in 1704, showing white light is a mix of colours."],
+1705:["In 1705, Edmond Halley predicted that a comet would return in 1758. It did, 16 years after he died."],
+1706:["The symbol π was first used for 3.14159… in 1706, by Welsh maths teacher William Jones."],
+1707:["Mount Fuji last erupted in 1707.","England and Scotland merged into Great Britain in 1707."],
+1709:["The winter of 1709 was so cold in Europe that wine froze in the glass at Versailles."],
+1710:["The first copyright law took effect in 1710. It protected books for 14 years."],
+1711:["The tuning fork was invented in 1711 by a trumpeter named John Shore."],
+1712:["Sweden had a 30 February in 1712, to undo a calendar mix-up.","The first practical steam engine went to work in 1712, pumping water out of a mine."],
+1714:["In 1714 Britain offered £20,000 to anyone who could find longitude at sea. A clockmaker won it.","Daniel Fahrenheit built the first mercury thermometer in 1714."],
+1715:["Louis XIV died in 1715 after 72 years on the throne. His heir was his great-grandson."],
+1718:["Blackbeard was killed in battle in 1718. It reportedly took five gunshots and twenty sword cuts."],
+1719:["Robinson Crusoe was published in 1719, often called the first novel in English."],
+1720:["Isaac Newton lost a fortune in the South Sea Bubble of 1720."],
+1721:["Bach sent off his Brandenburg Concertos in 1721 as a job application. He never got a reply."],
+1722:["A Dutch captain reached a remote Pacific island on Easter Sunday 1722 and named it accordingly."],
+1724:["Daniel Fahrenheit proposed his temperature scale in 1724."],
+1725:["Vivaldi’s Four Seasons was published in 1725."],
+1726:["Gulliver’s Travels was published in 1726. It mentions two moons of Mars 151 years before anyone found them."],
+1727:["Isaac Newton died in 1727. Voltaire was amazed to see a scientist buried like a king."],
+1735:["In 1735, Carl Linnaeus published the system we still use to name living things."],
+1736:["Euler solved the puzzle of the seven bridges of Königsberg in 1736 and accidentally invented graph theory."],
+1739:["The War of Jenkins’ Ear started in 1739. It really was named after a sea captain’s severed ear."],
+1742:["Anders Celsius proposed his scale in 1742, upside down: water boiled at 0 and froze at 100.","Handel’s Messiah premiered in Dublin in 1742. Ladies were asked not to wear hoops in their skirts, to fit more people in."],
+1747:["In 1747, James Lind ran one of the first clinical trials and found citrus cures scurvy. The navy waited decades to act on it."],
+1748:["Digging began at Pompeii in 1748, nearly 1,700 years after it was buried."],
+1752:["In Britain, 2 September 1752 was followed by 14 September. Eleven days were skipped to fix the calendar.","Benjamin Franklin flew his kite in a thunderstorm in 1752."],
+1753:["The British Museum was founded in 1753."],
+1755:["Samuel Johnson published his dictionary in 1755. He defined oats as a grain fed to horses in England and to people in Scotland.","The Lisbon earthquake of 1755 struck on All Saints’ Day, while the churches were full."],
+1756:["Mozart was born in 1756. He was composing by five."],
+1757:["The Battle of Plassey in 1757 began British rule in India."],
+1758:["Halley’s Comet came back in 1758, exactly as predicted. It has carried his name since.","Linnaeus named our species Homo sapiens in 1758."],
+1759:["Arthur Guinness signed a 9,000-year lease on his Dublin brewery in 1759, at £45 a year."],
+1800:["Alessandro Volta revealed the first battery in 1800. The volt is named after him."],
+1801:["On the first day of 1801, an astronomer spotted Ceres, the first asteroid ever found."],
+1803:["The United States doubled in size in 1803 by buying Louisiana from Napoleon for about 3 cents an acre."],
+1804:["Around 1804 the world’s population reached one billion for the first time.","The first steam locomotive ran in 1804, in Wales, on a bet."],
+1805:["Nelson won the Battle of Trafalgar in 1805 and died in the process. His body came home in a cask of brandy."],
+1806:["The Holy Roman Empire was dissolved in 1806 after roughly a thousand years."],
+1808:["Beethoven’s Fifth Symphony premiered in 1808 in an unheated hall, in a concert that ran four hours."],
+1809:["Charles Darwin and Abraham Lincoln were born on the very same day: 12 February 1809."],
+1810:["The tin can was patented in 1810. A proper can opener took almost another 50 years.","The first Oktoberfest was held in 1810, as a royal wedding party."],
+1812:["The Brothers Grimm published their first fairy tales in 1812. The original versions were much darker."],
+1814:["In 1814 a huge vat burst at a London brewery and a wave of beer swept through the streets."],
+1815:["Mount Tambora erupted in 1815, the most powerful eruption in recorded history.","Napoleon lost at Waterloo in 1815."],
+1816:["1816 was the Year Without a Summer. It snowed in June in New England, and the gloom inspired Frankenstein.","The stethoscope was invented in 1816 by a French doctor too shy to put his ear on a woman’s chest."],
+1818:["Frankenstein was published in 1818. Mary Shelley was 20.","Silent Night was first sung in 1818, with a guitar, reportedly because the church organ was broken."],
+1820:["Humans first laid eyes on Antarctica in 1820.","The Venus de Milo was dug up by a farmer in 1820."],
+1821:["Napoleon died in exile on St Helena in 1821."],
+1822:["Egyptian hieroglyphs were finally deciphered in 1822, by Jean-François Champollion."],
+1824:["Beethoven’s Ninth premiered in 1824. He was deaf and had to be turned around to see the applause."],
+1825:["The Hungarian Academy of Sciences was founded in 1825 when Count Széchenyi offered a full year of his income.","The first public steam railway opened in England in 1825."],
+1826:["The oldest surviving photograph was taken around 1826. The exposure took hours."],
+1827:["The friction match went on sale in 1827. Its inventor refused to patent it.","Beethoven died in 1827 during a thunderstorm."],
+1829:["Louis Braille published his reading system in 1829. He was 20 and had invented it as a teenager."],
+1831:["Charles Darwin boarded the Beagle in 1831. The captain nearly rejected him because of the shape of his nose.","Michael Faraday discovered in 1831 how to make electricity from magnets."],
+1834:["The Houses of Parliament burned down in 1834 because someone overstuffed a furnace with old tax records."],
+1835:["In 1835 a New York newspaper reported that bat-winged people lived on the Moon. Sales soared."],
+1837:["Queen Victoria came to the throne in 1837. She was 18."],
+1839:["The first selfie was taken in 1839 by Robert Cornelius in Philadelphia. He had to sit still for several minutes.","Photography was announced to the world in 1839."],
+1840:["The first postage stamp, the Penny Black, went on sale in 1840."],
+1843:["The first Christmas card was sent in 1843.","Ada Lovelace published what is often called the first computer program in 1843, for a machine that was never built."],
+1844:["The last two great auks were killed in 1844.","The first telegram was sent in 1844."],
+1845:["Ireland’s potato crop failed in 1845, starting the Great Famine."],
+1846:["Neptune was discovered in 1846 with a pencil first: mathematicians predicted where it must be, and it was there.","The saxophone was patented in 1846 by Adolphe Sax."],
+1847:["In 1847, Hungarian doctor Ignaz Semmelweis showed that washing hands saves lives. His colleagues mocked him for it."],
+1848:["Revolutions broke out across Europe in 1848, including Hungary’s on 15 March.","Gold was found in California in 1848."],
+1849:["The Chain Bridge opened in 1849, the first permanent bridge between Buda and Pest.","The safety pin was patented in 1849. Its inventor sold the rights for $400 to pay off a debt."],
+1851:["Moby-Dick was published in 1851 and flopped."],
+1853:["Levi Strauss opened his business in San Francisco in 1853."],
+1854:["In 1854, John Snow traced a cholera outbreak to one London water pump and had its handle removed."],
+1856:["In 1856 an 18-year-old trying to make malaria medicine accidentally invented the first synthetic dye: mauve.","The first Neanderthal fossils to be recognised were found in 1856."],
+1858:["The first transatlantic telegraph cable was laid in 1858. Queen Victoria’s 98-word greeting took 16 hours to send.","London’s Great Stink of 1858 smelled so bad that Parliament finally paid for sewers."],
+1859:["The biggest solar storm on record hit in 1859. Telegraph wires sparked and auroras were seen near the tropics.","Darwin published On the Origin of Species in 1859. The first printing sold out immediately.","Big Ben started ticking in 1859."],
+1900:["Max Planck introduced the quantum in 1900. He thought of it as a mathematical trick.","Women competed in the Olympics for the first time in 1900."],
+1901:["The first Nobel Prizes were handed out in 1901."],
+1902:["The teddy bear got its name in 1902, after President Teddy Roosevelt refused to shoot a tied-up bear."],
+1903:["The Wright brothers’ first flight in 1903 lasted 12 seconds and covered 37 metres. That is shorter than a jumbo jet’s wingspan.","The first Tour de France was held in 1903."],
+1904:["The first man across the line in the 1904 Olympic marathon had ridden part of the way in a car."],
+1905:["In 1905 a 26-year-old patent clerk named Einstein published four papers that rewrote physics."],
+1908:["Something exploded over Tunguska, Siberia, in 1908 and flattened about 80 million trees."],
+1911:["The Mona Lisa was stolen from the Louvre in 1911. Picasso was questioned as a suspect.","Roald Amundsen reached the South Pole in 1911."],
+1912:["The Titanic sank in 1912.","1912 was the last time Olympic gold medals were made of solid gold."],
+1913:["The crossword puzzle was invented in 1913. Its creator called it a word-cross."],
+1914:["On Christmas 1914, soldiers on both sides of the Western Front stopped shooting and played football.","The Panama Canal opened in 1914."],
+1915:["Einstein finished general relativity in 1915."],
+1918:["The First World War ended in 1918 at the 11th hour of the 11th day of the 11th month."],
+1919:["In 1919 a tank of molasses burst in Boston and a sticky wave tore through the streets at about 55 km/h.","A solar eclipse in 1919 proved Einstein right and made him famous overnight."],
+1921:["Insulin was discovered in 1921. The patent was sold for one dollar."],
+1922:["Tutankhamun’s tomb was opened in 1922 after more than 3,000 years."],
+1923:["By November 1923 a loaf of bread in Germany cost about 200 billion marks."],
+1924:["The first Winter Olympics were held in 1924."],
+1926:["Television was first demonstrated in 1926.","Winnie-the-Pooh was published in 1926."],
+1927:["Charles Lindbergh flew solo across the Atlantic in 1927. It took 33.5 hours and he had to stay awake for all of them."],
+1928:["Sliced bread first went on sale in 1928. So the best thing since sliced bread is less than a century of things.","Penicillin was discovered in 1928 because Alexander Fleming left a dish out before going on holiday."],
+1929:["The first Oscars ceremony was held in 1929. It lasted 15 minutes."],
+1930:["Pluto was discovered in 1930 and named by an 11-year-old girl, Venetia Burney.","The first football World Cup was played in 1930."],
+1931:["The Empire State Building opened in 1931. It had been built in just 410 days."],
+1932:["Australia sent soldiers with machine guns against emus in 1932. The emus won."],
+1935:["Monopoly went on sale in 1935."],
+1936:["The last known Tasmanian tiger died in a zoo in 1936."],
+1937:["The Golden Gate Bridge opened in 1937."],
+1938:["Hungarian journalist László Bíró patented the ballpoint pen in 1938. In much of the world a pen is still called a biro.","In 1938 fishermen caught a coelacanth, a fish thought extinct for 66 million years."],
+1940:["The Lascaux cave paintings were found in 1940 by four teenagers and a dog."],
+1944:["Ernő Rubik was born in Budapest in 1944. His cube followed 30 years later."],
+1945:["The microwave oven was born in 1945 when a radar engineer noticed the snack in his pocket had melted."],
+1946:["ENIAC, one of the first electronic computers, was unveiled in 1946. It weighed about 27 tonnes."],
+1947:["The transistor was invented in 1947. There are now billions in your phone.","A plane first broke the sound barrier in 1947."],
+1952:["Elizabeth II became queen in 1952. She reigned for 70 years."],
+1953:["Hungary’s Golden Team beat England 6–3 at Wembley in 1953, England’s first home defeat to a team from outside the British Isles.","Everest was first climbed in 1953, and the structure of DNA was worked out the same spring."],
+1954:["Roger Bannister ran the first four-minute mile in 1954. He was a medical student who trained at lunch."],
+1956:["Hungarians rose up against Soviet rule on 23 October 1956."],
+1957:["Sputnik, the first satellite, was launched in 1957. It was the size of a beach ball."],
+1958:["The LEGO brick was patented in 1958. Bricks from that year still click onto ones made today.","NASA was founded in 1958."],
+1959:["In 1959 a Soviet probe sent back the first photos of the far side of the Moon.","Barbie made her debut in 1959."],
+2000:["The Y2K bug was supposed to crash the world’s computers at the start of 2000. Almost nothing happened."],
+2001:["Wikipedia went online in 2001."],
+2002:["Euro notes and coins entered circulation on the first day of 2002."],
+2003:["The Human Genome Project was declared complete in 2003."],
+2004:["Facebook launched from a dorm room in 2004."],
+2005:["The first YouTube video was uploaded in 2005. It is 19 seconds long and about elephants."],
+2006:["Pluto was demoted to dwarf planet in 2006."],
+2007:["The first iPhone went on sale in 2007. It had no app store and couldn’t copy and paste."],
+2008:["The paper that invented Bitcoin was published in 2008 under a name nobody has ever matched to a person."],
+2010:["In 2010 someone paid 10,000 bitcoins for two pizzas."],
+2012:["The Higgs boson was found in 2012, 48 years after it was predicted."],
+2014:["In 2014 a probe landed on a comet for the first time. It bounced twice."],
+2015:["In 2015, detectors caught gravitational waves for the first time: ripples from two black holes that merged 1.3 billion years ago.","Back to the Future Part II sends Marty to 21 October 2015."],
+2019:["The first photo of a black hole was released in 2019.","The film Blade Runner is set in November 2019."],
+2021:["In 2021 a small helicopter flew on Mars. It carried a scrap of fabric from the Wright brothers’ plane."],
+2022:["The world’s population passed 8 billion in 2022."],
+2023:["Two Hungarian-born scientists won Nobel Prizes in 2023: Katalin Karikó and Ferenc Krausz."],
+2027:["On 2 August 2027 a total solar eclipse will last up to 6 minutes 23 seconds, the longest over land this century."],
+2029:["On Friday 13 April 2029, the asteroid Apophis will pass closer to Earth than our TV satellites. It will miss."],
+2038:["On 19 January 2038, clocks on old 32-bit computers run out of numbers and wrap around to 1901."],
+2045:["Futurist Ray Kurzweil picked 2045 as the year machines outthink all of humanity combined."],
+2112:["According to the manga, the robot cat Doraemon is born on 3 September 2112."],
+2114:["A forest was planted in Norway in 2014 to make paper for 100 secret books. None may be read until 2114."],
+2117:["The next transit of Venus across the Sun happens in December 2117. The last was in 2012."],
+2126:["Comet Swift–Tuttle, the source of the Perseid meteors, next returns in 2126."],
+2134:["Halley’s Comet is due to swing past again in 2134, closer to Earth than in 2061."],
+2154:["The film Avatar is set in the year 2154."]
+};
+/* ---------- hand-picked: the number itself ---------- */
+const S={
+0:["Zero is the only number the Romans had no way to write.","There is no year 0. The calendar jumps straight from 1 BC to AD 1.","0! equals 1. There is exactly one way to arrange nothing.","The word zero comes from the Arabic sifr, which also gave us cipher.","Florence banned Arabic numerals in 1299. Zero made accounts too easy to forge.","Zero is even. Surveys keep finding that many adults aren’t sure.","Absolute zero is −273.15 °C. Nothing can be colder, and nothing has ever quite reached it.","Zero is neither positive nor negative. It is the only real number that manages that.","The Maya invented zero independently and drew it as a shell.","The first rules for calculating with zero were written in India in the year 628.","In tennis, zero is love. One theory traces it to the French for egg, l’œuf.","Zero is a multiple of every number.","Mathematicians usually take 0 to the power 0 to be 1.","Zero degrees longitude runs through a brass strip in Greenwich, London. GPS puts it about 100 metres to the east.","Unicode character number 0 is called NULL. It has ended more strings than any other character.","The zero on a roulette wheel is green, and it is the reason the casino always wins in the end.","Babylonians used a placeholder for zero 2,300 years ago but never treated it as a number.","Dividing by zero is undefined. In 1997 it left a US Navy cruiser dead in the water for hours.","Counting from zero is why programmers call the first item number 0.","Midnight on a 24-hour clock is 00:00. The military sometimes calls it 24:00, but only for the end of a day."],
+1:["1 is the only positive number with exactly one divisor."],
+7:["007: Ian Fleming took the name James Bond from the author of a birdwatching guide on his shelf."],
+12:["Only 12 people have ever walked on the Moon."],
+13:["Fear of the number 13 has a name: triskaidekaphobia."],
+23:["Put 23 people in a room and it is more likely than not that two share a birthday."],
+27:["Hendrix, Joplin, Morrison, Cobain and Winehouse all died at 27."],
+32:["Water freezes at 32 °F, and adult humans have 32 teeth."],
+37:["Ask people for a random number under 100 and 37 comes up far more often than chance."],
+40:["Quarantine comes from the Italian for 40: the number of days ships had to wait offshore during the plague."],
+42:["A rainbow always appears 42 degrees from the point opposite the Sun.","In computer text, character 42 is the asterisk: the wildcard that stands for anything. Douglas Adams said his 42 was just a joke."],
+46:["Humans have 46 chromosomes. Potatoes have 48."],
+51:["Area 51 officially did not exist until the CIA acknowledged it in 2013."],
+52:["There are 52 cards in a deck. The number of ways to shuffle them has 68 digits."],
+57:["Heinz already sold more than 60 products when it picked the slogan 57 Varieties. The founder just liked the number."],
+101:["In Orwell’s 1984, Room 101 holds the worst thing in the world. He named it after a BBC meeting room."],
+108:["A baseball has exactly 108 double stitches."],
+112:["112 is the emergency number across the EU. It also works on a locked phone."],
+118:["118 chemical elements are known. The last four were named in 2016."],
+122:["The oldest person ever, Jeanne Calment, lived 122 years. She met Vincent van Gogh as a girl."],
+137:["Physicists are haunted by 1/137, a number that sets how strongly light and matter interact. Wolfgang Pauli died in hospital room 137."],
+144:["144 is a dozen dozens, called a gross. It is also the largest square number in the Fibonacci sequence."],
+147:["147 is the highest possible break in snooker."],
+153:["153 = 1³ + 5³ + 3³. It is also 1! + 2! + 3! + 4! + 5!."],
+155:["The heaviest dog ever weighed was Zorba, an English mastiff, at 155.6 kg."],
+180:["180 is the top score with three darts, and the angles of every triangle add up to 180°."],
+206:["Adults have 206 bones. Babies are born with around 300 that fuse over time."],
+212:["Water boils at 212 °F."],
+220:["220 and 284 are amicable numbers: the divisors of each add up to the other. Pythagoreans saw them as a symbol of friendship."],
+221:["Sherlock Holmes lives at 221B Baker Street. In Conan Doyle’s day the street numbers didn’t go that high."],
+251:["The tallest living man, Sultan Kösen, is 251 cm tall."],
+256:["One byte can hold 256 different values. That is why old games max out at 255."],
+300:["300 is a perfect game in ten-pin bowling: twelve strikes in a row."],
+314:["3.14: Pi Day is 14 March, which is also Einstein’s birthday."],
+343:["Sound travels at about 343 metres per second in room-temperature air."],
+404:["404 is the internet’s code for page not found."],
+418:["Error 418 officially means “I’m a teapot”. It began as an April Fools’ joke in 1998 and browsers still know it."],
+420:["420 is the smallest number that divides evenly by everything from 1 to 7."],
+451:["Web error 451 means blocked for legal reasons. It is named after Ray Bradbury’s Fahrenheit 451."],
+500:["500 is the web’s code for “the server broke and it’s not your fault”."],
+555:["Phone numbers starting 555 are reserved for films and TV. The 555 timer is also one of the best-selling microchips ever."],
+640:["“640K ought to be enough for anybody.” Bill Gates insists he never said it."],
+720:["720 is 6 factorial: the number of ways to arrange six books on a shelf."],
+746:["One horsepower is about 746 watts. A real horse can briefly manage nearly 15 horsepower."],
+747:["The Boeing 747’s hump exists so the nose could open for cargo. Its designers assumed passengers would switch to supersonic jets."],
+828:["The Burj Khalifa is 828 metres tall, the tallest building in the world."],
+911:["The Porsche 911 was meant to be the 901. Peugeot claimed the rights to car names with a zero in the middle.","The first 911 emergency call was made in 1968 in Haleyville, Alabama."],
+1001:["1001 = 7 × 11 × 13. Multiply any three-digit number by it and the digits repeat: 438 becomes 438,438."],
+1009:["1009 is the smallest four-digit prime."],
+1014:["Hungary’s highest point, Kékes, is 1,014 metres above sea level."],
+1024:["1024 is 2 to the power 10, which is why a kilobyte was never quite a thousand bytes."],
+1055:["One British thermal unit is about 1,055 joules: the energy of a single burning match."],
+1080:["The angles inside any octagon add up to 1080°. A skateboard 1080 is three full spins, first landed by a 12-year-old."],
+1089:["Take a three-digit number like 742, reverse it and subtract (495), then reverse that and add: 495 + 594 = 1089. It always ends at 1089."],
+1105:["1105 fools a classic prime test even though it equals 5 × 13 × 17. Such impostors are called Carmichael numbers."],
+1111:["1111 × 1111 = 1,234,321."],
+1138:["George Lucas hides the number 1138 in his films, a nod to his first feature, THX 1138."],
+1200:["Noon comes from the Latin nona hora, the ninth hour, which was originally about 3 p.m. It drifted earlier over the centuries."],
+1225:["1225 is both a square (35²) and a triangular number. Very few numbers are both."],
+1233:["1233 = 12² + 33². Split it down the middle and square the halves."],
+1234:["1234 is the world’s most common PIN. In one leaked data set, about one in ten people used it."],
+1235:["Sound travels at about 1,235 km/h at sea level.","The digits 1, 2, 3, 5 are four Fibonacci numbers in a row."],
+1247:["The heaviest pumpkin ever grown weighed 1,247 kg, about as much as a small car."],
+1337:["1337 spells “leet” in hacker speak, short for elite."],
+1345:["Ben Nevis, the highest mountain in Britain, is 1,345 metres tall."],
+1358:["The digits 1, 3, 5, 8 are four Fibonacci numbers in a row."],
+1408:["Stephen King’s haunted hotel room is number 1408. The digits add up to 13."],
+1414:["√2 is 1.414… It is the ratio of the sides of every sheet of A4 paper, which is why folding one in half keeps the shape."],
+1440:["There are exactly 1,440 minutes in a day.","A classic floppy disk held 1,440 kilobytes."],
+1609:["A mile is 1,609 metres."],
+1618:["The golden ratio starts 1.618."],
+1642:["Lake Baikal is 1,642 metres deep, the deepest lake on Earth. It holds about a fifth of the world’s unfrozen fresh water."],
+1701:["The starship Enterprise carries the registry number NCC-1701."],
+1729:["1729 is the smallest number that is the sum of two cubes in two ways: 1³ + 12³ and 9³ + 10³. Ramanujan pointed this out from his hospital bed when a friend called his taxi number dull."],
+1732:["√3 is 1.732…"],
+1852:["A nautical mile is exactly 1,852 metres."],
+1900:["Excel believes 1900 was a leap year. It wasn’t. The bug was copied on purpose from an older spreadsheet and can never be fixed."],
+1920:["A Full HD screen is 1,920 pixels wide."],
+2001:["In 2001: A Space Odyssey, shift each letter of HAL forward by one and you get IBM. Arthur C. Clarke swore it was a coincidence."],
+2025:["2025 = 45², and also (20 + 25)². It is the sum of the cubes of 1 through 9 as well."],
+2048:["The game 2048 was written in a weekend in 2014 by a 19-year-old. 2048 is 2 to the power 11."],
+2147:["2,147,483,647 is the biggest number a 32-bit computer can count to. A music video broke YouTube’s view counter by passing it."],
+2236:["√5 is 2.236…"],
+2240:["A British long ton is 2,240 pounds."],
+2357:["2357 is the first four primes written side by side: 2, 3, 5, 7."],
+2358:["The digits 2, 3, 5, 8 are four Fibonacci numbers in a row."],
+2359:["23:59 is the last minute of the day. Deadlines love it because nobody argues about which day midnight belongs to."]
+};
+/* ---------- hand-picked: records ---------- */
+const R={
+1:["The heaviest hailstone ever weighed fell in Bangladesh in 1986: just over 1 kg."],
+6:["Hungarian fencer Aladár Gerevich won gold in the same event at 6 different Olympics, 28 years apart. Nobody else has done that."],
+7:["Park ranger Roy Sullivan was struck by lightning 7 times and survived every one."],
+10:["The longest human tongue on record measures 10.1 cm from tip to lip."],
+11:["The longest anyone has provably stayed awake is 11 days. A 17-year-old did it for a school science fair in 1964.","Only three films have won 11 Oscars: Ben-Hur, Titanic and The Return of the King."],
+12:["It was said paper can’t be folded more than 8 times. In 2002 a schoolgirl folded one sheet 12 times and wrote the equation proving how."],
+13:["Just Fontaine scored 13 goals at a single World Cup in 1958. He did it in borrowed boots."],
+14:["Only 14 mountains rise above 8,000 metres. In 2023, Kristin Harila climbed all of them in 92 days."],
+15:["In 1946 Hungary had the worst hyperinflation ever recorded. Prices doubled about every 15 hours."],
+17:["The longest single lightning flash on record lasted 17 seconds.","Malala Yousafzai won the Nobel Peace Prize at 17, the youngest laureate ever."],
+20:["The shortest reign in history: Louis XIX was King of France for about 20 minutes in 1830 before abdicating.","Any scrambled Rubik’s Cube can be solved in 20 moves or fewer. Proving it took 35 CPU-years of Google’s computers.","The biggest hailstone ever measured was 20 cm across, the size of a volleyball."],
+21:["The heaviest house cat on record, Himmy from Australia, weighed 21.3 kg. Guinness then closed the category so nobody would overfeed a cat to beat it."],
+23:["Michael Phelps won 23 Olympic gold medals. That is more than most countries have won in their history."],
+26:["The biggest wave ever surfed was 26.2 metres tall, off Nazaré in Portugal.","Walt Disney won 26 Oscars, more than anyone else."],
+27:["The largest machine ever built, the Large Hadron Collider, is a ring 27 km around."],
+28:["Michael Phelps has 28 Olympic medals. If he were a country he would rank in the top 40 of all time."],
+29:["The oldest dog reliably recorded, an Australian cattle dog called Bluey, lived to 29."],
+31:["By 2025, Kami Rita Sherpa had stood on top of Everest 31 times."],
+38:["The shortest war in history, between Britain and Zanzibar in 1896, lasted about 38 minutes.","The oldest cat ever recorded, Creme Puff from Texas, lived to 38. Her owner fed her bacon, eggs and coffee."],
+39:["In 2012, Felix Baumgartner jumped from a balloon 39 km up, higher than anyone had jumped before."],
+41:["The highest skydive ever started 41 km up, in 2014. The jumper was a 57-year-old Google executive."],
+43:["A Rubik’s Cube has 43 quintillion possible positions."],
+45:["The longest word in major English dictionaries has 45 letters: pneumonoultramicroscopicsilicovolcanoconiosis. It was coined on purpose to be the longest."],
+54:["The shortest adult ever measured, Chandra Bahadur Dangi of Nepal, stood 54.6 cm tall."],
+55:["The longest sea crossing in the world, linking Hong Kong, Zhuhai and Macau, is 55 km of bridge and tunnel."],
+56:["The highest air temperature ever recorded is 56.7 °C, in Death Valley in 1913.","Joe DiMaggio hit safely in 56 baseball games in a row in 1941. Statisticians call it the record least likely to fall."],
+57:["The longest railway tunnel in the world, the Gotthard Base Tunnel, runs 57 km under the Alps."],
+58:["The longest place name in Europe has 58 letters: Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch. It was invented in the 1860s to attract tourists.","The highest dive from a cliff on record was 58.8 metres. The diver hit the water at over 120 km/h."],
+100:["Wilt Chamberlain scored 100 points in one NBA game in 1962. No video of it exists.","The biggest number ever printed on a banknote: Hungary’s 100 quintillion pengő note of 1946."],
+105:["The fastest baseball pitch ever recorded travelled 105.1 mph, about 169 km/h."],
+111:["The largest single flower ever measured was a Rafflesia 111 cm across. It smells of rotting meat."],
+112:["The loudest burp on record hit 112.4 decibels, louder than a chainsaw.","The tallest dog ever, a Great Dane named Zeus, stood just under 112 cm at the shoulder."],
+113:["The loudest bark ever measured, 113.1 decibels, came from a golden retriever called Charlie."],
+115:["The tallest living tree, a California redwood named Hyperion, is over 115 metres high. Its exact location is kept secret."],
+123:["The longest house cat ever measured, a Maine Coon called Stewie, was 123 cm from nose to tail."],
+131:["The oldest message in a bottle was found in 2018 on an Australian beach, 131 years after a German ship dropped it overboard."],
+135:["The most expensive car ever sold, a 1955 Mercedes 300 SLR, went for 135 million euros in 2022."],
+140:["The 800 metres world record is 1:40.91, set by David Rudisha in an Olympic final he led from the gun."],
+144:["The fastest a human has ever pedalled a bicycle under their own power is 144 km/h, lying down inside a carbon shell."],
+149:["The highest score in a football match is 149–0. In 2002 a team in Madagascar scored 149 own goals to protest a referee."],
+154:["In 1974 an SR-71 Blackbird flew from New York to London in 1 hour 54 minutes."],
+158:["The speed record up the 900-metre Nose of El Capitan is 1 hour 58 minutes. Most climbers take three days."],
+159:["In 2019, Eliud Kipchoge ran a marathon in 1:59:40, the first person under two hours. It doesn’t count as a record because of the rotating pacemakers."],
+200:["The men’s marathon world record is 2:00:35, set by Kelvin Kiptum in 2023."],
+203:["The fastest steam locomotive ever, Mallard, hit 203 km/h in 1938. Nobody has beaten it in steam since."],
+204:["The biggest lottery jackpot ever won was 2.04 billion dollars, on a single ticket in California in 2022."],
+210:["The women’s high jump record is 2.10 metres. Yaroslava Mahuchikh broke a 37-year-old mark in 2024."],
+212:["The fastest typist on record, Barbara Blackburn, peaked at 212 words per minute. She had failed her school typing class."],
+214:["Herbert Nitsch rode a weighted sled 214 metres under the sea on a single breath in 2007."],
+230:["The loudest animal on Earth is the sperm whale. Its clicks reach 230 decibels, louder than a rocket launch."],
+240:["For 15 years the world’s fastest roller coaster was Formula Rossa in Abu Dhabi: 240 km/h in under five seconds. Riders have to wear goggles."],
+242:["The fastest animal ever clocked is a peregrine falcon in a dive: 242 mph."],
+245:["The men’s high jump record of 2.45 metres has stood since 1993. Javier Sotomayor cleared a bar higher than a football goal."],
+250:["The tallest observation wheel in the world, Ain Dubai, is 250 metres high. That is nearly twice the London Eye."],
+252:["Concorde’s fastest crossing from New York to London took 2 hours 52 minutes."],
+253:["The fastest officially recorded tennis serve is 253 km/h, by John Isner."],
+254:["The longest ski jump in competition is 254.5 metres, set in 2025. That is two and a half football pitches through the air."],
+255:["The speed skiing record is 255.5 km/h. The skier goes from zero to that in about six seconds."],
+310:["The tallest flower ever measured was a titan arum 3.10 metres high. It blooms for about a day and smells like a corpse."],
+326:["The 1500 metres world record is 3:26.00, set by Hicham El Guerrouj in 1998 and still standing."],
+332:["The deepest scuba dive ever reached 332 metres. Going down took 12 minutes. Coming back up took nearly 14 hours."],
+333:["A perfect game of Pac-Man scores exactly 3,333,360 points. The first one took six hours in 1999."],
+335:["The longest war in history lasted 335 years, between the Netherlands and the Isles of Scilly. Nobody fired a shot. They simply forgot to sign a peace treaty until 1986."],
+343:["The mile world record is 3:43, set in 1999 and unbeaten since."],
+356:["In 2017, Alex Honnold climbed the 900-metre wall of El Capitan without a rope in 3 hours 56 minutes."],
+400:["The highest score in a Test cricket innings is 400 not out, by Brian Lara in 2004."],
+408:["The fastest wind gust ever measured outside a tornado was 408 km/h, on an Australian island in 1996."],
+430:["The lowest dry land on Earth is the shore of the Dead Sea, about 430 metres below sea level."],
+433:["John Cage’s most famous piece is 4 minutes 33 seconds of the performer playing nothing at all."],
+437:["The longest single stay in space is 437 days. Valeri Polyakov walked out of the capsule on landing to prove humans could arrive on Mars able to work."],
+450:["The most expensive painting ever sold went for 450 million dollars in 2017. Experts still argue over whether Leonardo actually painted it."],
+500:["The largest single-dish telescope on Earth, in China, is 500 metres across.","In 2016, Eddie Hall became the first person to deadlift 500 kg. He passed out afterwards."],
+501:["The highest score in first-class cricket is 501 not out, by Brian Lara in 1994.","A leg of darts starts at 501. The fewest darts that can finish it is nine."],
+507:["The oldest animal ever found was a clam aged 507. Scientists only learned its age by opening it, which killed it."],
+511:["Cy Young won 511 baseball games as a pitcher. Nobody else has reached 420."],
+515:["The longest drive in professional golf went 515 yards. The golfer was 64 years old."],
+524:["The tallest wave ever recorded was a 524-metre megatsunami in Lituya Bay, Alaska, in 1958. Two people in a fishing boat rode it out and survived."],
+603:["The fastest train ever, a Japanese maglev, reached 603 km/h on a test run in 2015."],
+617:["The largest crocodile ever held in captivity, Lolong, was 6.17 metres long."],
+630:["In 2025, Armand Duplantis pole-vaulted 6.30 metres. He has broken the world record more than a dozen times, one centimetre at a time."],
+635:["The heaviest person in medical history weighed an estimated 635 kg."],
+639:["The slowest concert in the world is under way in a German church. John Cage’s organ piece began in 2001 and will take 639 years to finish."],
+655:["The fastest swim across the English Channel took 6 hours 55 minutes."],
+732:["The longest a total solar eclipse can possibly last is about 7 minutes 32 seconds."],
+829:["The longest lightning bolt ever recorded stretched 829 km across the United States."],
+938:["The longest plank ever held lasted 9 hours 38 minutes."],
+958:["9.58 seconds: Usain Bolt’s 100 metres world record from 2009. At top speed he was covering 12 metres every second."],
+1000:["The biggest coin ever minted is Australian, made of gold, and weighs 1,000 kg.","A piece of music called Longplayer began playing on 1 January 2000. It is composed to last 1,000 years without repeating."],
+1006:["The longest papal election took 1,006 days. Frustrated locals finally tore the roof off the building to hurry the cardinals up."],
+1049:["10.49 seconds: the women’s 100 metres world record, set by Florence Griffith-Joyner in 1988 and never beaten."],
+1105:["The longest tennis match ever lasted 11 hours 5 minutes, spread over three days at Wimbledon in 2010. The final set finished 70–68."],
+1111:["Cosmonaut Oleg Kononenko has spent 1,111 days of his life in space, more than anyone else."],
+1228:["The land speed record is 1,228 km/h. In 1997 a car with two jet engines broke the sound barrier in the Nevada desert."],
+1357:["In 2012, Felix Baumgartner fell at 1,357 km/h, becoming the first person to break the sound barrier without a vehicle."],
+1435:["Most of the world’s railway tracks are exactly 1,435 mm apart, a width inherited from English coal wagons."],
+1511:["The fastest heartbeat of any mammal belongs to the Etruscan shrew: up to 1,511 beats a minute."],
+1758:["One of the largest diamonds ever found weighs 1,758 carats and is the size of a tennis ball. It was dug up in Botswana in 2019."],
+1825:["The most rain ever to fall in 24 hours is 1,825 mm, on the island of Réunion in 1966. That is more than London gets in three years."],
+1829:["The triple jump world record is 18.29 metres, set by Jonathan Edwards in 1995."],
+1919:["19.19 seconds: Usain Bolt’s 200 metres world record."],
+1930:["The longest pizza ever made stretched 1,930 metres. It took 100 chefs and a conveyor-belt oven."],
+1946:["The worst hyperinflation ever recorded hit Hungary in 1946. Prices doubled about every 15 hours, and a 100 quintillion pengő note was printed."],
+2023:["The longest bridge span in the world is 2,023 metres, across the Dardanelles in Turkey. The number was chosen to mark the Turkish Republic’s 100th birthday in 2023."],
+2134:["21.34 seconds: the women’s 200 metres world record, set in 1988 and still standing."],
+2212:["The deepest known cave on Earth, Veryovkina in Georgia, goes down 2,212 metres."],
+2356:["The shot put world record is 23.56 metres. The shot weighs as much as a bowling ball."]
+};
+
+const R2=[
+[2,"The fastest red card in football history came after 2 seconds. The player swore at the loudness of the whistle."],
+[5,"The first hard drive, in 1956, stored 5 megabytes. It weighed about a tonne and was delivered by forklift."],
+[9,"The most babies ever born at once who all survived is 9, to a mother from Mali in 2021.","Hungary has won 9 Olympic golds in men’s water polo, more than any other country."],
+[10,"The youngest Oscar winner ever was 10 years old: Tatum O’Neal in 1974."],
+[12,"The youngest chess grandmaster in history earned the title at 12.","France covers 12 time zones, more than any other country, thanks to its far-flung islands."],
+[14,"Rafael Nadal won the French Open 14 times. He lost there only four times in 19 years."],
+[16,"Miroslav Klose scored 16 World Cup goals, the most of any player."],
+[18,"Jack Nicklaus won 18 golf majors, a record that has stood since 1986."],
+[21,"Meryl Streep has 21 Oscar nominations, more than any other actor."],
+[22,"An elephant is pregnant for 22 months, longer than any other mammal.","The longest standing ovation at the Cannes film festival lasted 22 minutes, for Pan’s Labyrinth."],
+[24,"The biggest litter of puppies on record is 24, born to a mastiff named Tia in 2004.","Novak Djokovic has won 24 Grand Slam singles titles, the men’s record."],
+[27,"Hungary scored 27 goals at the 1954 World Cup. No team has scored more at a single tournament."],
+[28,"The record for toes on one cat is 28. A normal cat has 18."],
+[29,"The longest flight by a paper aeroplane lasted 29.2 seconds."],
+[31,"The biggest win in international football is 31–0: Australia against American Samoa in 2001.","The narrowest street in the world, in Reutlingen, Germany, is 31 cm wide at its tightest point."],
+[33,"The longest professional baseball game ran 33 innings and took more than eight hours.","The longest winning streak in NBA history is 33 games."],
+[35,"Beyoncé has won 35 Grammys, more than any other artist."],
+[37,"The longest coma on record lasted 37 years.","Italy went 37 international football matches without losing between 2018 and 2021, the world record."],
+[43,"The oldest goldfish ever, Tish, lived to 43. He was won at a funfair in 1956.","The largest clock faces in the world, on a tower in Mecca, are 43 metres across."],
+[44,"The smallest country in the world, Vatican City, covers 44 hectares. That is about 60 football pitches."],
+[46,"The 100 metres freestyle swimming record is 46.40 seconds."],
+[47,"The oldest record in track athletics is the women’s 400 metres: 47.60 seconds, set in 1985."],
+[49,"Rocky Marciano retired at 49 wins and 0 defeats, the only heavyweight champion never to lose.","Arsenal went 49 league matches unbeaten between 2003 and 2004, the English record."],
+[50,"Floyd Mayweather retired with 50 wins and no defeats, the best perfect record in boxing history."],
+[53,"The shortest scheduled flight in the world links two Scottish islands. The record time is 53 seconds."],
+[58,"The lowest round ever shot on golf’s PGA Tour is 58."],
+[100,"Sachin Tendulkar is the only cricketer with 100 international centuries."],
+[101,"Hungary beat El Salvador 10–1 in 1982. It is still the only time a team has scored ten in a World Cup match."],
+[105,"The deepest metro station in the world, Arsenalna in Kyiv, lies 105 metres underground. The escalator ride takes about five minutes.","Lewis Hamilton has won 105 Formula 1 races, the most of any driver."],
+[108,"The first human spaceflight lasted 108 minutes. Yuri Gagarin landed by parachute, separately from his capsule."],
+[110,"The longest boxing match in history went 110 rounds and more than seven hours in 1893. It was declared no contest because both men were too exhausted to continue."],
+[116,"The oldest man who ever lived, Jiroemon Kimura of Japan, reached 116."],
+[129,"The loudest scream on record is 129 decibels, by a British classroom assistant."],
+[131,"A goalkeeper holds a scoring record too: Rogério Ceni of Brazil scored 131 goals, all from free kicks and penalties."],
+[133,"The longest anyone has survived alone on a life raft is 133 days. Poon Lim caught fish with a hook made from a torch spring."],
+[136,"The longest game in World Chess Championship history ran 136 moves and nearly eight hours, in 2021."],
+[146,"The longest dead-straight stretch of road in Australia runs 146 km without a single bend.","The Great Pyramid was originally 146 metres tall and stayed the tallest building on Earth for about 3,800 years."],
+[200,"The most hula hoops spun at once by one person is 200."],
+[209,"The women’s marathon world record is 2:09:56, set in 2024. It was the first time a woman ran under 2:10."],
+[215,"The tallest living woman, Rumeysa Gelgi of Turkey, is 215 cm tall.","Wayne Gretzky scored 215 points in one ice hockey season. Nobody else has ever reached 200."],
+[219,"The longest tornado track ever recorded ran 219 miles across three US states in 1925."],
+[222,"The fastest wind-powered vehicle on land hit 222 km/h in 2022, on a dry salt lake."],
+[225,"The heaviest snatch ever lifted is 225 kg, thrown from floor to overhead in one movement."],
+[243,"Venus has the longest day of any planet: one spin takes 243 Earth days, longer than its year."],
+[246,"The tallest woman ever measured, Zeng Jinlian of China, was 246 cm tall."],
+[255,"Garry Kasparov was the world number one in chess for 255 months."],
+[300,"Minecraft was the first video game to sell 300 million copies."],
+[305,"The tallest dam in the world, Jinping-I in China, is 305 metres high."],
+[319,"New York’s Chrysler Building, 319 metres, was the tallest in the world for just 11 months."],
+[330,"The Eiffel Tower is 330 metres tall. It held the height record for 41 years."],
+[338,"The longest frisbee throw on record flew 338 metres."],
+[343,"The tallest bridge in the world, the Millau Viaduct in France, stands 343 metres high. Drivers often cross above the clouds."],
+[348,"The women’s 1500 metres world record is 3:48, set by Faith Kipyegon in 2025."],
+[400,"The fastest helicopter flight on record just topped 400 km/h, in 1986. The record still stands."],
+[406,"Ted Williams batted .406 in 1941. Nobody in top-level baseball has hit .400 since."],
+[407,"The women’s mile world record is 4:07."],
+[420,"A tabby cat from Texas called Dusty gave birth to 420 kittens, the most on record."],
+[427,"The longest boomerang throw that came back travelled 427 metres out."],
+[429,"The longest moustache ever measured was 4.29 metres."],
+[438,"The longest anyone has survived adrift at sea is 438 days. A fisherman drifted from Mexico to the Marshall Islands, about 10,000 km."],
+[452,"The tallest twin towers in the world, the Petronas Towers in Kuala Lumpur, are 452 metres high."],
+[458,"The longest ship ever built, the supertanker Seawise Giant, was 458 metres long. It needed 9 km to stop."],
+[506,"The women’s pole vault record is 5.06 metres and has stood since 2009."],
+[508,"The fastest maximum break in snooker took Ronnie O’Sullivan 5 minutes 8 seconds. That is one shot every nine seconds.","Taipei 101 is 508 metres tall and was the tallest building in the world until 2010."],
+[511,"The water speed record is 511 km/h, set in 1978 in a boat built in a back garden. Nobody has survived going faster."],
+[553,"Toronto’s CN Tower, 553 metres, was the tallest free-standing structure on Earth for 32 years."],
+[601,"The tallest clock tower in the world, in Mecca, is 601 metres high. Its clock can be read from 25 km away."],
+[605,"The fastest motorcycle ever averaged 605 km/h across the Bonneville salt flats."],
+[625,"The highest bridge in the world, opened in China in 2025, carries cars 625 metres above the river."],
+[634,"The tallest tower in the world, Tokyo Skytree, is 634 metres. The height was picked because 6-3-4 can be read as Musashi, the old name of the region."],
+[637,"The fastest talker ever recorded managed 637 words in one minute."],
+[640,"The heaviest aircraft ever built, the Antonov An-225, could take off weighing 640 tonnes. Only one was ever finished."],
+[643,"The longest rally in professional tennis lasted 643 shots and 29 minutes, for a single point."],
+[646,"The tallest structure ever built until 2008 was a 646-metre radio mast in Poland. It collapsed in 1991."],
+[716,"The fastest-spinning star known turns 716 times a second."],
+[717,"The 3000 metres world record is 7:17, set by Jakob Ingebrigtsen in 2024."],
+[723,"Barbara Cartland wrote 723 novels, the most by any author. At her peak she finished one every two weeks."],
+[752,"The women’s long jump record is 7.52 metres and has stood since 1988.","The 3000 metres steeplechase world record is 7:52."],
+[754,"The two-mile world record is 7:54."],
+[800,"Muttiah Muralitharan took 800 Test wickets, the most in cricket history. He got the 800th with his final ball."],
+[840,"Papua New Guinea has about 840 living languages, more than any other country.","The longest table tennis rally lasted 8 hours 40 minutes."],
+[850,"The fastest piston-engined aeroplane reached 850 km/h. It was a modified Second World War fighter."],
+[853,"The Airbus A380 is certified to carry 853 passengers, the most of any airliner."],
+[900,"In 1999, Tony Hawk landed the first 900 on a skateboard: two and a half full spins. It took him 11 attempts on live TV."],
+[906,"The longest spacewalk in history lasted 9 hours 6 minutes, by two Chinese astronauts in 2024."],
+[909,"The longest fingernails ever grown on one hand measured 909 cm in total. Their owner didn’t cut them for 66 years."],
+[948,"The most valuable stamp in the world, a one-cent stamp from British Guiana, sold for 9.48 million dollars."],
+[1022,"A border collie called Chaser knew the names of 1,022 toys, the largest tested vocabulary of any animal."],
+[1140,"The most snow ever measured in one season is 1,140 inches, about 29 metres, on Mount Baker in the USA."],
+[1212,"The women’s 100 metres hurdles world record is 12.12 seconds."],
+[1219,"The oldest national flag still in use is Denmark’s. Legend says it fell from the sky in 1219."],
+[1235,"The 5000 metres world record is 12:35."],
+[1358,"The women’s 5000 metres world record is 13:58. In 2025 Beatrice Chebet became the first woman under 14 minutes."],
+[1406,"Rickey Henderson stole 1,406 bases in his baseball career. Second place is almost 500 behind."],
+[1430,"The 1500 metres freestyle swimming record is 14:30."],
+[1500,"Mathematician Paul Erdős published about 1,500 papers, more than any other in history. He owned almost nothing and lived out of a suitcase."],
+[1520,"The women’s 1500 metres freestyle swimming record is 15:20. Katie Ledecky owns the 20 fastest times ever swum."],
+[1552,"The oldest golf course in the world is at St Andrews, where the game has been played since 1552."],
+[1645,"The oldest newspaper still published was founded in Sweden in 1645."],
+[1725,"The oldest restaurant in continuous operation, Botín in Madrid, has been serving since 1725. The oven has reportedly never gone out."],
+[1728,"A budgerigar named Puck knew 1,728 words, the largest vocabulary of any bird."],
+[1752,"The oldest zoo in the world, in Vienna, opened in 1752."],
+[1832,"The oldest known living land animal, a tortoise called Jonathan, hatched around 1832."],
+[1840,"A battery-powered bell in an Oxford laboratory has been ringing since 1840. Nobody knows what the batteries are made of."],
+[1857,"The oldest football club in the world, Sheffield FC, was founded in 1857."],
+[1901,"The longest-burning light bulb hangs in a California fire station. It has been on since 1901."],
+[1902,"The oldest roller coaster still standing was built in Pennsylvania in 1902."],
+[1926,"The most expensive bottle of whisky ever sold was distilled in 1926. It went for 2.7 million dollars."],
+[1927,"The longest-running lab experiment started in 1927: a funnel of tar pitch in Australia. Nine drops have fallen since."],
+[1933,"The most valuable coin in the world is a gold piece dated 1933. It sold for 18.9 million dollars."],
+[1945,"The most expensive bottle of wine ever sold was a 1945 Burgundy, at 558,000 dollars."],
+[1952,"The most expensive sports card ever sold is a 1952 Mickey Mantle, at 12.6 million dollars."],
+[1955,"The most expensive car ever sold was built in 1955: a Mercedes racing coupé that fetched 135 million euros."],
+[2243,"The most bee stings anyone has survived is 2,243. The man hid underwater in a river while the swarm waited."]
+];
+for(const [k,...v] of R2)(R[k]=R[k]||[]).push(...v);
+/* ---------- tables for calculated facts ---------- */
+const PEOPLE=[["Hadrian",76,138],["Marcus Aurelius",121,180],["Augustine of Hippo",354,430],["Emperor Justinian",482,565],["the poet Li Bai",701,762],["Avicenna",980,1037],["Omar Khayyam",1048,1131],["Hildegard of Bingen",1098,1179],["Saladin",1137,1193],["Rumi",1207,1273],["Kublai Khan",1215,1294],["Thomas Aquinas",1225,1274],["Marco Polo",1254,1324],["Dante",1265,1321],["Petrarch",1304,1374],["Tamerlane",1336,1405],["Zheng He",1371,1433],["Matthias Corvinus",1443,1490],["Columbus",1451,1506],["Leonardo da Vinci",1452,1519],["Copernicus",1473,1543],["Michelangelo",1475,1564],["Martin Luther",1483,1546],["Henry VIII",1491,1547],["Elizabeth I",1533,1603],["Shakespeare",1564,1616],["Galileo",1564,1642],["Kepler",1571,1630],["Descartes",1596,1650],["Rembrandt",1606,1669],["Pascal",1623,1662],["Louis XIV",1638,1715],["Isaac Newton",1643,1727],["Bach",1685,1750],["Voltaire",1694,1778],["Benjamin Franklin",1706,1790],["Euler",1707,1783],["Kant",1724,1804],["George Washington",1732,1799],["Mozart",1756,1791],["Napoleon",1769,1821],["Beethoven",1770,1827],["Gauss",1777,1855],["Darwin",1809,1882],["Lincoln",1809,1865],["Franz Liszt",1811,1886],["Charles Dickens",1812,1870],["Queen Victoria",1819,1901],["Tolstoy",1828,1910],["Mark Twain",1835,1910],["Edison",1847,1931],["Van Gogh",1853,1890],["Nikola Tesla",1856,1943],["Marie Curie",1867,1934],["Gandhi",1869,1948],["Churchill",1874,1965],["Einstein",1879,1955],["Picasso",1881,1973],["Charlie Chaplin",1889,1977],["Walt Disney",1901,1966],["Alan Turing",1912,1954],["Queen Elizabeth II",1926,2022],["Ferenc Puskás",1927,2006],["Neil Armstrong",1930,2012],["Elvis Presley",1935,1977],["Stephen Hawking",1942,2018],["Freddie Mercury",1946,1991],["Steve Jobs",1955,2011]];
+const ERAS=[["the Roman Empire in the west",-27,476],["China’s Han dynasty",-202,220],["the Maya classic period",250,900],["the Byzantine Empire",330,1453],["China’s Tang dynasty",618,907],["the Republic of Venice",697,1797],["the Abbasid Caliphate",750,1258],["the Viking Age",793,1066],["Japan’s Heian period",794,1185],["the Holy Roman Empire",800,1806],["China’s Song dynasty",960,1279],["the Kingdom of Hungary",1000,1946],["the Mongol Empire",1206,1368],["the Ottoman Empire",1299,1922],["the Aztec city of Tenochtitlan",1325,1521],["the Hundred Years’ War",1337,1453],["China’s Ming dynasty",1368,1644],["the Mughal Empire",1526,1857],["the East India Company",1600,1874],["Japan’s Edo period",1603,1868],["China’s Qing dynasty",1644,1912],["the Soviet Union",1922,1991]];
+const INVENT=[["eyeglasses",1286],["the printing press",1440],["the microscope",1590],["the telescope",1608],["the pendulum clock",1656],["the piano",1700],["the steam locomotive",1804],["the bicycle",1817],["the photograph",1826],["anaesthesia",1846],["the telephone",1876],["the light bulb",1879],["the aeroplane",1903],["television",1926],["penicillin",1928],["the World Wide Web",1989],["the iPhone",2007]];
+const HALLEY=[66,141,218,295,374,451,530,607,684,760,837,912,989,1066,1145,1222,1301,1378,1456,1531,1607,1682,1758,1835,1910,1986,2061,2134];
+const MELT=[["mercury",-39],["water ice",0],["caesium",28],["gallium",30],["potassium",64],["sodium",98],["sulfur",115],["indium",157],["lithium",181],["tin",232],["bismuth",271],["cadmium",321],["lead",327],["zinc",420],["antimony",631],["magnesium",650],["aluminium",660],["table salt",801],["calcium",842],["germanium",938],["silver",962],["gold",1064],["copper",1085],["uranium",1132],["manganese",1246],["beryllium",1287],["silicon",1414],["nickel",1455],["cobalt",1495],["iron",1538],["titanium",1668],["platinum",1768],["zirconium",1855],["chromium",1907],["rhodium",1964],["boron",2076],["hafnium",2233],["ruthenium",2334],["iridium",2446]];
+const TALL=[["blue whales laid end to end",30],["Statues of Liberty",93],["Great Pyramids of Giza",138.5],["Eiffel Towers",330],["Empire State Buildings",443],["Burj Khalifas",828]];
+const FAST=[["a person walking",5],["Usain Bolt at full sprint",44.7],["a racehorse",70],["a cheetah",100],["a diving peregrine falcon",389],["the fastest production car",490],["the fastest train ever",603],["a cruising airliner",900],["the land speed record",1228],["Concorde",2180],["the SR-71 Blackbird",3530]];
+const BLOCKS=[[0x80,"Basic Latin"],[0x100,"Latin-1"],[0x180,"Latin Extended-A"],[0x250,"Latin Extended-B"],[0x2B0,"phonetic alphabet (IPA)"],[0x300,"Spacing Modifier"],[0x370,"Combining Diacritical Marks"],[0x400,"Greek and Coptic"],[0x530,"Cyrillic"],[0x590,"Armenian"],[0x600,"Hebrew"],[0x700,"Arabic"],[0x750,"Syriac"],[0x780,"Arabic Supplement"],[0x7C0,"Thaana (Maldivian)"],[0x800,"N’Ko (West African)"],[0x840,"Samaritan"],[0x860,"Mandaic"],[0x870,"Syriac Supplement"],[0x900,"Arabic Extended"],[0x980,"Devanagari (Hindi)"]];
+const ZOD=["Rat","Ox","Tiger","Rabbit","Dragon","Snake","Horse","Goat","Monkey","Rooster","Dog","Pig"];
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const NOTES=["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
+const MORSE=["−−−−−","·−−−−","··−−−","···−−","····−","·····","−····","−−···","−−−··","−−−−·"];
+const ONES=["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const TENS=["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+/* ---------- helpers ---------- */
+const P=[];(()=>{const L=30000,s=new Uint8Array(L+1);for(let i=2;i<=L;i++){if(!s[i]){P.push(i);for(let j=i*i;j<=L;j+=i)s[j]=1;}}})();
+const fmt=x=>x.toLocaleString("en-US");
+const isP=n=>{if(n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true;};
+const factor=n=>{const f=[];for(let p=2;p*p<=n;p++)while(n%p===0){f.push(p);n/=p;}if(n>1)f.push(n);return f;};
+const ord=n=>{const v=n%100,s=(v>10&&v<14)?"th":(["th","st","nd","rd"][n%10]||"th");return fmt(n)+s;};
+const pl=(k,w)=>k+" "+w+(k===1?"":"s");
+function words(n){if(n<20)return ONES[n];if(n<100)return TENS[Math.floor(n/10)]+(n%10?"-"+ONES[n%10]:"");if(n<1000)return ONES[Math.floor(n/100)]+" hundred"+(n%100?" "+words(n%100):"");return words(Math.floor(n/1000))+" thousand"+(n%1000?" "+words(n%1000):"");}
+function roman(n){const m=[[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];let s="";for(const[v,r]of m)while(n>=v){s+=r;n-=v;}return s;}
+function dur(s){s=Math.round(s);const u=[["year",31557600],["day",86400],["hour",3600],["minute",60],["second",1]],o=[];for(const[nm,v]of u){if(s>=v&&o.length<2){const k=Math.floor(s/v);s-=k*v;o.push(pl(k,nm));}}return o.join(" ")||"0 seconds";}
+const leap=y=>(y%4===0&&y%100!==0)||y%400===0;
+function dow(y,m,d){const t=[0,3,2,5,0,3,5,1,4,6,2,4];if(m<3)y--;return(((y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)+t[m-1]+d)%7)+7)%7;}
+function easter(Y){const a=Y%19,b=Math.floor(Y/100),c=Y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);return[Math.floor((h+l-7*m+114)/31),((h+l-7*m+114)%31)+1];}
+const dsum=n=>String(n).split("").reduce((a,c)=>a+ +c,0);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const esc=c=>c.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const dateStr=d=>DAYS[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear();
+
+/* ---------- calculated facts ---------- */
+function build(n,hh,mm,now,live){
+  const F=[],add=(t,h)=>{if(h)F.push({t,h});};
+  const N=fmt(n),ts=String(hh).padStart(2,"0")+String(mm).padStart(2,"0"),clock=ts.slice(0,2)+":"+ts.slice(2);
+  const NOW=now.getFullYear(),str=String(n),yr=n<1000?"the year "+n:String(n),Yr=n<1000?"The year "+n:String(n);
+
+  /* --- maths --- */
+  if(n===1)add("math","1 is neither prime nor composite. Mathematicians dropped it from the primes about a century ago.");
+  if(n>=2){
+    const f=factor(n);
+    if(f.length===1)add("math",`${N} is a prime number, the ${ord(P.indexOf(n)+1)} one. Nothing divides it but 1 and itself.`);
+    else add("math",`Break ${N} into primes and you get ${f.join(" × ")}.`+(f.length===2&&f[0]!==f[1]?" Two primes multiplied: the kind of number that keeps your passwords safe.":""));
+    if(f.length>1){
+      let d=0,s=0;for(let i=1;i<=n;i++)if(n%i===0){d++;if(i<n)s+=i;}
+      add("math",`${N} has ${d} divisors. The ones smaller than itself add up to ${fmt(s)}, which makes it ${s>n?"an “abundant” number":s===n?"a perfect number, one of the rarest kinds there is":"a “deficient” number"}.`);
+      let phi=n;for(const p of new Set(f))phi=phi/p*(p-1);
+      add("math",`${fmt(phi)} of the numbers below ${N} share no factor with it at all.`);
+    }
+  }
+  if(n>=2){const b=n.toString(2),ones=b.split("1").length-1,pal=b.length>2&&b===[...b].reverse().join("");
+    add("math",`In binary, ${N} is <span class="mono">${b}</span>`+(pal?". That reads the same backwards.":`: ${pl(ones,"one")} and ${pl(b.length-ones,"zero")}.`));}
+  if(n>=1)add("math",`A Roman would carve ${N} as ${roman(n)}`+(roman(n).length>=10?`. That takes ${roman(n).length} letters.`:"."));
+  if(n>=10)add("math",`Programmers write ${N} as <span class="mono">0x${n.toString(16).toUpperCase()}</span> in hexadecimal and <span class="mono">${n.toString(8)}</span> in octal.`);
+  if(n>=10){const s=dsum(n);add("math",`The digits of ${N} add up to ${s}`+(n%s===0?`, and ${N} divides evenly by ${s}. Numbers like that are called Harshad numbers, Sanskrit for great joy.`:(isP(s)?", which is prime.":".")));}
+  if(n>=10){const r=+[...str].reverse().join("");
+    if(r===n)add("math",`${str} is a palindrome: the same forwards and backwards.`);
+    else if(isP(n)&&isP(r))add("math",`${N} is prime, and so is its mirror image ${fmt(r)}. Primes like that are called emirps.`);
+    else if(n%10!==0)add("math",`Read backwards, ${str} becomes ${r}, which ${isP(r)?"is a prime number":"equals "+factor(r).join(" × ")}.`);
+    if(r!==n){let x=BigInt(n),k=0,first="",ok=false;
+      while(k<60){const rv=BigInt([...x.toString()].reverse().join(""));if(k===0)first=`${n} + ${rv} = ${x+rv}`;x+=rv;k++;const sx=x.toString();if(sx===[...sx].reverse().join("")){ok=true;break;}}
+      if(ok)add("math",k===1?`Add ${str} to its own reverse: ${first}. A palindrome on the first try.`:`Add ${str} to its reverse, then keep doing that to the result. After ${k} rounds you hit a palindrome: ${x.toString().length>18?"a "+x.toString().length+"-digit one":x.toString()}.`);
+      else add("math",`Add a number to its reverse a few times and you nearly always get a palindrome. Start from ${N} and it still hasn’t happened after 60 rounds. Nobody has proved whether it ever will.`);}
+  }
+  if(n>=3){let x=n,st=0,pk=n;while(x!==1){x=x%2?3*x+1:x/2;if(x>pk)pk=x;st++;}
+    add("math",`Play the Collatz game with ${N} (halve it if even, triple it and add 1 if odd): you reach 1 after ${pl(st,"step")}`+(pk>n?`, after climbing as high as ${fmt(pk)}.`:", never rising above where you started.")+" Nobody can prove every number gets there.");}
+  if(n>=2){let a=0,b=0;for(let i=1;2*i*i<=n;i++){const j=Math.round(Math.sqrt(n-i*i));if(i*i+j*j===n){a=i;b=j;break;}}
+    if(a)add("math",`${N} = ${a}² + ${b}². Only certain numbers can be split into two squares.`);
+    else{let q=null;const r=Math.floor(Math.sqrt(n));
+      outer:for(let w=r;w>=0;w--)for(let x=Math.min(w,Math.floor(Math.sqrt(n-w*w)));x>=0;x--)for(let y=Math.min(x,Math.floor(Math.sqrt(n-w*w-x*x)));y>=0;y--){const z2=n-w*w-x*x-y*y,z=Math.round(Math.sqrt(z2));if(z<=y&&z*z===z2){q=[w,x,y,z].filter(v=>v>0);break outer;}}
+      if(q)add("math",`No two square numbers add up to ${N}. But four always do the job for any number. Here: ${q.map(v=>v+"²").join(" + ")}.`);}
+  }
+  if(n>=2){const seen=new Set();let x=n;const ch=[n];while(x!==1&&!seen.has(x)){seen.add(x);x=String(x).split("").reduce((a,c)=>a+c*c,0);ch.push(x);}
+    add("math",x===1?`${N} is a happy number. Square its digits and add them, repeat, and you land on 1: ${ch.slice(0,7).join(" → ")}.`:`${N} is an unhappy number. Keep squaring and adding its digits (${ch.slice(0,4).join(" → ")}…) and you never reach 1. You circle through 4 forever.`);}
+  if(n>=4&&n%2===0){let k=0,ex=0;for(const p of P){if(p>n/2)break;if(isP(n-p)){k++;if(!ex)ex=p;}}
+    add("math",`There ${k===1?"is exactly 1 way":"are "+fmt(k)+" ways"} to write ${N} as two primes added together, such as ${ex} + ${n-ex}. Whether every even number can do this is unproven after 280 years.`);}
+  if(n>=5&&n%2===1)add("math",`${fmt((n-1)/2)} + ${fmt((n+1)/2)} = ${N}. Every odd number is two next-door neighbours added up.`);
+  if(n>=4)add("math",`Add every whole number from 1 to ${N} and you get ${fmt(n*(n+1)/2)}.`);
+  if(n>=5){let lg=0,z=0;for(let i=2;i<=n;i++)lg+=Math.log10(i);for(let p=5;p<=n;p*=5)z+=Math.floor(n/p);
+    add("math",`${N}! (that is 1 × 2 × 3 … × ${N}) has ${fmt(Math.floor(lg)+1)} digits and ends in ${pl(z,"zero")}.`);}
+  if(n>=10){const s=(2n**BigInt(n)).toString();add("math",`2 to the power ${N} is a ${fmt(s.length)}-digit number starting ${s.slice(0,5)}…`+(s.length>81?" The observable universe has only about 10⁸⁰ atoms.":""));}
+  if(n>=2)add("math",`The ${ord(n)} prime number is ${fmt(P[n-1])}.`);
+  if(n>=10){let a=1n,b=1n;for(let i=3;i<=n;i++){[a,b]=[b,a+b];}const s=b.toString();add("math",`The ${ord(n)} Fibonacci number ${s.length<=18?"is "+fmt(Number(s)):"has "+fmt(s.length)+" digits"}.`);}
+  if(n>=4){const r=Math.round(Math.sqrt(n));if(r*r===n)add("math",`${N} is a perfect square: ${r} × ${r}.`);
+    const c=Math.round(Math.cbrt(n));if(c*c*c===n)add("math",`${N} is a perfect cube: ${c} × ${c} × ${c}.`);
+    const t=(Math.sqrt(8*n+1)-1)/2;if(Number.isInteger(t))add("math",`${N} is a triangular number. You could stack ${N} cannonballs in a flat triangle with ${t} rows.`);
+    if((n&(n-1))===0)add("math",`${N} is a power of two: 2 multiplied by itself ${Math.log2(n)} times.`);}
+  if(n>=10){const L=str.length;if(str.split("").reduce((a,c)=>a+(+c)**L,0)===n)add("math",`${N} equals the sum of its own digits each raised to the power ${L}. Only a handful of numbers can do that.`);
+    if(new Set(str).size===1)add("math",`${str} is a repdigit: one digit, repeated.`);}
+  if(n>=3){let fa=1,fb=2,isF=n===1;const fs=[1];while(fb<=n){fs.push(fb);if(fb===n)isF=true;[fa,fb]=[fb,fa+fb];}
+    if(isF)add("math",`${N} is a Fibonacci number. Each one is the sum of the two before it.`);
+    else if(n>=4){const parts=[];let x=n;for(let i=fs.length-1;i>=0&&x>0;i--)if(fs[i]<=x){parts.push(fs[i]);x-=fs[i];}
+      add("math",`Every number can be built from Fibonacci numbers that aren’t neighbours, in exactly one way. For ${N}: ${parts.map(fmt).join(" + ")}.`);}}
+  if(n>=3){let p=n-1,q=n+1;while(!isP(p))p--;while(!isP(q))q++;
+    if(isP(n))add("math",isP(n-2)||isP(n+2)?`${N} is a twin prime: its partner ${isP(n+2)?n+2:n-2} is just two steps away.`:`The primes on either side of ${N} are ${fmt(p)} and ${fmt(q)}.`);
+    else add("math",`${N} sits between the primes ${fmt(p)} and ${fmt(q)}.`+(q-p>=14?` That is a desert of ${q-p-1} numbers in a row with no prime.`:""));}
+  if(n>=11){const w=words(n);add("math",`Spelled out, “${w}” needs ${w.replace(/[^a-z]/g,"").length} letters.`);}
+  if(n>=5)add("math",`A shape with ${N} sides has ${fmt(n*(n-3)/2)} diagonals.`+(n>=100?" From any distance it looks like a circle.":""));
+  if(n>=3)add("math",`If ${N} people all shook hands with each other, that would be ${fmt(n*(n-1)/2)} handshakes.`);
+  if(n>=10&&!str.includes("0")){const ch=[n];let x=n;while(x>9){x=String(x).split("").reduce((a,c)=>a*c,1);ch.push(x);}
+    if(ch.length>=3)add("math",`Multiply the digits of ${str} together, then do it again with the answer: ${ch.join(" → ")}.`);}
+  if(new Set(ts).size>1){let x=ts,k=0;while(x!=="6174"&&k<10){const a=[...x].sort(),lo=+a.join(""),hi=+a.reverse().join("");x=String(hi-lo).padStart(4,"0");k++;}
+    if(x==="6174"&&k>0)add("math",`Take the digits ${ts}, arrange them biggest-first and smallest-first, and subtract. Repeat. After ${pl(k,"round")} you hit 6174 and stay there forever. That works for almost any four digits.`);}
+
+  /* --- the clock --- */
+  const mod=hh*60+mm;
+  {let a=Math.abs(30*(hh%12)+0.5*mm-6*mm);a=Math.min(a,360-a);
+   add("time",`At ${clock} the hands of an analogue clock are ${a===0?"exactly on top of each other":a+"° apart"}${a===90?", a perfect right angle":a===180?", a perfectly straight line":""}.`);}
+  add("time",`At ${clock}, ${fmt(mod)} minute${mod===1?"":"s"} of the day ${mod===1?"is":"are"} gone and ${fmt(1440-mod)} remain. The day is ${(mod/14.4).toFixed(1)}% done.`);
+  {const f=mod/1440,dh=Math.floor(f*10),dm=Math.floor(f*1000)%100;
+   add("time",`Revolutionary France tried 10-hour days with 100-minute hours. On that clock, ${clock} would be ${dh}:${String(dm).padStart(2,"0")}.`);}
+  if(live){const u=now.getUTCHours()*3600+now.getUTCMinutes()*60+now.getUTCSeconds();
+   add("time",`In 1998 Swatch tried to abolish time zones by cutting the day into 1,000 “beats”. Right now it is @${String(Math.floor(((u+3600)%86400)/86.4)).padStart(3,"0")} everywhere on Earth.`);}
+  add("fun",`${clock} in Morse code: ${[...ts].map(c=>MORSE[+c]).join("&nbsp;&nbsp;")}`);
+  {const [r,g,b,a]=[...ts].map(c=>+c*17);
+   add("fun",`<span class="mono">#${ts}</span> is a valid web colour: <span class="sw" style="background:rgb(${r},${g},${b})"></span> red ${r}, green ${g}, blue ${b}, and ${Math.round(a/2.55)}% opaque.`);}
+  if(n>=2){
+    const d1=new Date(now.getTime()-n*864e5),d2=new Date(now.getTime()+n*864e5);
+    add("time",`${N} days ago it was ${dateStr(d1)}.`);
+    add("time",`${N} days from now it will be ${dateStr(d2)}.`);
+    if(n>=48)add("time",`${N} hours is ${dur(n*3600)}.`);
+    if(n>=90)add("time",`${N} seconds is ${dur(n)}.`+(n>=600?" Long enough to boil an egg "+Math.floor(n/360)+" times over.":""));
+    const w=new Date(now.getTime()-n*7*864e5);
+    if(n>=60)add("time",`${N} weeks ago was ${MONTHS[w.getMonth()]} ${w.getFullYear()}.`);
+    add("time",n>1468?`Nobody has ever lived ${N} months. The record is 1,468 months: Jeanne Calment, who died at 122.`:`Someone ${N} months old is ${n<12?"not yet one":Math.floor(n/12)+(n%12?" and "+pl(n%12,"month"):"")}.`);
+    add("time",`Your heart beats ${N} times in about ${dur(n*60/70)} when you are resting.`);
+  }
+
+  /* --- science and scale --- */
+  if(n>=2){
+    add("sci",n<499?`Sunlight that left the Sun ${N} seconds ago is ${(n/4.99).toFixed(0)}% of the way to Earth.`:`Sunlight takes about 499 seconds to reach us. In ${N} seconds it could make the trip ${(n/499).toFixed(1)} times.`);
+    add("sci",`Count ${N} seconds between a lightning flash and its thunder and the strike was about ${n*0.343<1?Math.round(n*343)+" metres":fmt(Math.round(n*0.343))+" km"} away.`+(n*0.343>25?" In reality you can’t hear thunder past about 25 km.":""));
+    add("sci",`While ${N} seconds tick by, Earth travels ${fmt(Math.round(n*29.78))} km along its orbit. You don’t feel a thing.`);
+    add("sci",`About 44 lightning bolts flash somewhere on Earth every second. That makes roughly ${fmt(n*44)} in ${N} seconds.`);
+    add("sci",`Roughly four babies are born every second, so ${N} seconds brings about ${fmt(Math.round(n*4.2))} new people.`);
+    add("sci",`Hair grows about 0.4 mm a day. Skip the barber for ${N} days and you gain ${n*0.04<1?(n*0.4).toFixed(1)+" mm":(n*0.04).toFixed(1)+" cm"}.`);
+    add("sci",`${N} Earth days is ${(n/87.97).toFixed(1)} years on Mercury and ${(n/686.98).toFixed(2)} years on Mars.`);
+    add("sci",`Walking ${N} km without stopping would take ${dur(n/5*3600)}.`);
+    add("sci",`${N} km is ${(n/400.75).toFixed(2)}% of the way around the equator.`);
+    add("fun",`${N} euros in 1-cent coins would weigh ${n*0.23>=1000?(n*0.23/1000).toFixed(2)+" tonnes":(n*0.23).toFixed(1)+" kg"}.`);
+    add("fun",`${N} megabytes would fill ${fmt(Math.ceil(n/1.44))} floppy disks.`);
+  }
+  if(n>=93)add("sci",`In ${N} minutes the International Space Station circles the Earth ${(n/92.9).toFixed(1)} times.`);
+  if(n>=43)add("sci",`${N} km is ${(n/42.195).toFixed(1)} marathons back to back.`);
+  if(n>=100)add("sci",`At Usain Bolt’s world-record pace, ${N} metres would take ${dur(n*0.0958)}. No human can hold that pace past the first hundred.`);
+  if(n>=70)add("sci",`${N} kilocalories is roughly what a 70 kg person burns running ${Math.round(n/70)} km.`);
+  if(n>=200)add("sci",`It takes about ${dur(n/238*60)} to read ${N} words.`);
+  {let lo=null,hi=null;for(const m of MELT){if(m[1]<=n)lo=m;else if(!hi)hi=m;}
+   if(lo&&hi)add("sci",`At ${N} °C, ${lo[0]} has already melted (it goes at ${fmt(lo[1])} °C) but ${hi[0]} is still solid (until ${fmt(hi[1])} °C).`);}
+  if(n>=40){let t=null;for(const x of TALL)if(n/x[1]>=1.2)t=x;if(t)add("sci",`${N} metres is ${(n/t[1]).toFixed(1)} ${t[0]}.`);}
+  if(n>=10)add("sci",`Dive ${N} metres into the sea and the pressure is ${Math.round(1+n/10)} times what you feel at the surface. `+(n<200?"There is still enough sunlight for plants here.":n<1000?"This is the twilight zone: only a faint blue glow gets this deep.":"No sunlight has ever reached this depth."));
+  if(n>=6){let lo=null,hi=null;for(const x of FAST){if(x[1]<n)lo=x;else if(!hi&&x[1]>n)hi=x;}
+   if(lo&&hi)add("sci",`At ${N} km/h you would overtake ${lo[0]} (${fmt(lo[1])} km/h) but lose to ${hi[0]} (${fmt(hi[1])} km/h).`+(n>1235?` That is Mach ${(n/1235).toFixed(2)}.`:""));}
+  if(n>=20){const m=69+12*Math.log2(n/440),k=Math.round(m),c=Math.round((m-k)*100);
+   add("sci",`A tone of ${N} Hz is ${Math.abs(c)<6?"almost exactly":"close to"} the note ${NOTES[((k%12)+12)%12]}${Math.floor(k/12)-1}`+(c===0?".":`, ${Math.abs(c)} hundredths of a semitone ${c>0?"sharp":"flat"}.`)+(k>=21?"":" That is below the lowest key on a piano."));}
+  else if(n>=1)add("sci",`A ${N} Hz vibration is infrasound: too low for human ears. Elephants talk to each other down here.`);
+  if(n>=10){const c=n<380?null:n<450?"violet":n<495?"blue":n<570?"green":n<590?"yellow":n<620?"orange":n<750?"red":null;
+   add("sci",c?`Light with a wavelength of ${N} nanometres is ${c}.`:n<380?`Light with a wavelength of ${N} nanometres is ultraviolet. Human eyes only start working at about 380`+(n>=300?", though bees can see this.":"."):`Light with a wavelength of ${N} nanometres is infrared. Your eyes give up at about 750`+(n>=850&&n<=950?", but TV remotes blink in exactly this range.":"."));}
+  if(n>=33&&!(n>=127&&n<=160)&&n!==173&&!(n>=0x700&&n<0x900)){const ch=String.fromCodePoint(n);let bl="";for(const b of BLOCKS)if(n<b[0]){bl=b[1];break;}
+   if(bl&&/[\p{L}\p{N}\p{S}\p{P}]/u.test(ch))add("fun",`Every character on a computer has a number. Number ${N} is “${esc(ch)}”, from the ${bl} block.`);
+   else if(bl&&/\p{M}/u.test(ch))add("fun",`Every character on a computer has a number. Number ${N} is an accent that stacks onto the letter before it (${bl}): ◌${ch}`);}
+
+  /* --- the number as a year --- */
+  if(n>=1){
+    const past=n<NOW,ago=NOW-n;
+    if(n===NOW)add("year",`${n} is this year. You are living inside the number on the clock.`);
+    else if(past)add("year",`The year ${n} was ${fmt(ago)} years ago`+(ago>=75?`: roughly ${Math.round(ago/25)} generations of your ancestors.`:"."));
+    else add("year",`The year ${n} is ${-ago} years away. `+(-ago>122?"Nobody alive today will see it unless the age record of 122 is smashed.":`A baby born today will be ${-ago} then.`));
+    add("year",`${Yr} ${past?"was":"is"} a Year of the ${ZOD[(((n-4)%12)+12)%12]} in the Chinese zodiac.`);
+    add("year",rnd([`The Holocene calendar starts counting at the dawn of farming. There, ${n} is the year ${fmt(n+10000)}.`,`Romans counted years from the founding of their city. For them, AD ${n} would be the year ${fmt(n+753)}.`]));
+    if(n>=1583){
+      const j=dow(n,1,1);let f13=0;for(let m=1;m<=12;m++)if(dow(n,m,13)===5)f13++;
+      add("year",`${n} ${past?"started":n===NOW?"started":"will start"} on a ${DAYS[j]} and ${past?"had":n===NOW?"has":"will have"} ${pl(f13,"Friday the 13th").replace("13ths","13th")}${f13>1?"s":""}.`.replace("13th Fridays","13ths"));
+      if(n%100===0&&n%400!==0)add("year",`${n} looks like a leap year but isn’t. Century years only get a 29 February if they divide by 400.`);
+      else if(leap(n))add("year",`${n} ${past?"was":"is"} a leap year, with a 29 February.`);
+      const e=easter(n);add("year",`Easter Sunday ${past?"fell":"falls"} on ${e[1]} ${MONTHS[e[0]-1]} in ${n}.`);
+      if(n!==NOW){let y=null;if(past){for(let c=NOW;c<NOW+60;c++)if(dow(c,1,1)===j&&leap(c)===leap(n)){y=c;break;}
+          if(y)add("year",`A wall calendar from ${n} ${y===NOW?"works perfectly this year":"will work perfectly again in "+y}: same dates on the same weekdays.`);}
+        else{for(let c=NOW;c>NOW-60;c--)if(dow(c,1,1)===j&&leap(c)===leap(n)){y=c;break;}
+          if(y)add("year",`Keep your ${y} wall calendar. It will be correct again in ${n}.`);}}
+    }
+    if(n<=NOW){
+      const alive=shuffle(PEOPLE.filter(p=>p[1]<n&&n<p[2])).slice(0,2);
+      if(alive.length)add("year",`In ${yr}, ${alive.map(p=>`${p[0]} turned ${n-p[1]}`).join(" and ")}.`);
+      else{const nx=PEOPLE.find(p=>p[1]>n),pv=[...PEOPLE].reverse().find(p=>p[2]<=n);
+        if(nx)add("year",`In ${yr}, ${nx[0]} would not be born for another ${pl(nx[1]-n,"year")}`+(pv&&n-pv[2]>0?`, and ${pv[0]} had been dead for ${n-pv[2]}.`:"."));}
+      const er=ERAS.filter(e=>e[1]<n&&n<e[2]);
+      if(er.length){const e=rnd(er),age=e[1]<0?n-e[1]-1:n-e[1];add("year",`In ${yr}, ${e[0]} was ${fmt(age)} years old and had ${pl(e[2]-n,"year")} left.`);}
+      const inv=INVENT.filter(i=>i[1]>n).slice(0,3);
+      if(inv.length){const i=rnd(inv);add("year",`In ${yr}, ${i[0]} ${i[0].endsWith("s")&&!i[0].startsWith("the")&&i[0]!=="anaesthesia"?"were":"was"} still about ${fmt(i[1]-n)} years in the future.`);}
+      if(n<1492)add("year",`Nobody in Europe in the year ${n} had ever tasted a potato, a tomato, chocolate or chilli. All of them arrived after 1492.`);
+      if(n<1781)add("year",`In ${yr}, the Solar System ended at Saturn. Uranus wasn’t found until 1781 and Neptune until 1846.`);
+      if(n<1820&&n>=1000)add("year",`In ${yr}, no human being had ever seen Antarctica. That took until 1820.`);
+      if(n>=1846&&n<2011)add("year",`By ${yr}, Neptune had not yet completed a single lap of the Sun since its discovery in 1846. It finally did in 2011.`);
+    }
+    if(n>=1930&&n<2178)add("year",`In ${yr}, Pluto still ${past?"had":"has"}n’t finished one orbit since it was discovered in 1930. That happens in 2178.`);
+    if(n<=2134){const i=HALLEY.findIndex(h=>h>=n);
+      if(HALLEY[i]===n)add("year",`Halley’s Comet ${past?"blazed":"blazes"} past Earth in ${n}.`);
+      else if(i>0&&n<=NOW)add("year",`In ${yr}, Halley’s Comet had been gone for ${pl(n-HALLEY[i-1],"year")} and was ${pl(HALLEY[i]-n,"year")} from coming back.`);
+      else if(i>0)add("year",`By ${yr}, Halley’s Comet will be ${pl(n-HALLEY[i-1],"year")} past its ${HALLEY[i-1]} visit, with ${pl(HALLEY[i]-n,"year")} to go until the next.`);}
+    if(n>NOW){const au=173+3.6*(n-NOW);add("year",`By ${yr}, Voyager 1 should be about ${(au/173.1).toFixed(1)} light-days from Earth. The nearest star is more than 1,500 light-days away.`);}
+  }
+  return F;
+}
+
+/* ---------- choose a set for one minute ---------- */
+function pick(n,hh,mm,now,live){
+  const cur=[...(Y[n]||[]).map(h=>({t:"year",h})),...(R[n]||[]).map(h=>({t:"rec",h})),...(S[n]||[]).map(h=>({t:"fun",h}))];
+  const pool=build(n,hh,mm,now,live),by={};
+  for(const f of pool)(by[f.t]=by[f.t]||[]).push(f);
+  for(const k in by)shuffle(by[k]);
+  const target=Math.max(22,Math.min(cur.length+13,28)),out=[];
+  let left=true;
+  while(cur.length+out.length<target&&left){left=false;for(const k of shuffle(Object.keys(by))){if(by[k].length&&cur.length+out.length<target){out.push(by[k].pop());left=true;}}}
+  const recs=(by.rec||[]).splice(0,cur.some(f=>f.t==="rec")?2:3);out.push(...recs);
+  const lead=cur.length?[cur.shift()]:[];
+  return [...lead,...shuffle([...cur,...out])];
+}
+
+/* ---------- page ---------- */
+if(typeof document!=="undefined"){
+  const $=id=>document.getElementById(id),LABEL={year:"Year",math:"Maths",sci:"Science",time:"Time",fun:"Trivia",rec:"Record"};
+  const override=null;let shown="";
+  const current=()=>{const d=new Date();return override?{hh:override[0],mm:override[1],d,live:false}:{hh:d.getHours(),mm:d.getMinutes(),d,live:true};};
+  function render(){
+    const c=current(),n=c.hh*100+c.mm,h2=String(c.hh).padStart(2,"0"),m2=String(c.mm).padStart(2,"0");
+    shown=h2+m2;
+    $("clock").innerHTML=h2+'<span class="colon">:</span>'+m2;
+    $("num").textContent=fmt(n);
+    $("eyebrow").textContent=c.live?"Your clock says":"You picked";
+    const facts=pick(n,c.hh,c.mm,c.d,c.live);
+    $("head").textContent=facts.length+" things about "+fmt(n);
+    $("sub").textContent=c.live?"A fresh set arrives when the clock ticks over to the next minute.":"Preview of "+h2+":"+m2+". The live clock is paused.";
+    $("list").innerHTML=facts.map((f,i)=>`<li class="fact" data-t="${f.t}" style="--i:${i}"><span class="idx">${String(i+1).padStart(2,"0")}</span><div><span class="tag">${LABEL[f.t]}</span><p>${f.h}</p></div></li>`).join("");
+    document.querySelector(".ledger").scrollTop=0;
+  }
+  function tick(){
+    const d=new Date();
+    if(!override){
+      const key=String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0");
+      if(key!==shown)render();
+      const s=d.getSeconds();
+      $("barfill").style.width=(s/60*100)+"%";
+      $("next").textContent="New facts in "+(60-s)+" s";
+    }else{$("barfill").style.width="0";$("next").textContent="Live clock paused";}
+  }
+  $("shuffle").addEventListener("click",render);
+  tick();setInterval(tick,250);
+}
+if(typeof module!=="undefined")module.exports={pick,build,Y,S,R};
+</script>
+</body>
+</html>
